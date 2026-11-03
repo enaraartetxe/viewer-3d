@@ -54,10 +54,10 @@ Plain HTML, CSS and JavaScript (no build step), with
   apps on a Mac runner and publishes them
   ([.github/workflows/publicar.yml](.github/workflows/publicar.yml)).
 
-## Made with AI
+## Co-created with AI
 
 Idea, design, direction and testing: Enara Artetxe. Code written with
-**Claude Opus 5.5** (Anthropic), credited as co-author in the commits.
+**Claude Opus 5.5** (Anthropic).
 
 ## Licences
 
@@ -126,10 +126,10 @@ programas de escritorio son la misma página dentro de una ventana de
   `escritorio/neutralino.config.json`, GitHub Actions genera los tres programas
   en un Mac y los publica ([.github/workflows/publicar.yml](.github/workflows/publicar.yml)).
 
-### Hecho con IA
+### Cocreado con IA
 
 Idea, diseño, dirección y pruebas: Enara Artetxe. Código escrito con
-**Claude Opus 5.5** (Anthropic), que figura como coautor en los commits.
+**Claude Opus 5.5** (Anthropic).
 
 ### Licencias
 
