@@ -1,0 +1,60 @@
+# Builds and publishes the desktop apps (Windows, Linux, Mac) as a GitHub
+# release whenever the version in escritorio/neutralino.config.json changes.
+# Genera y publica los programas de escritorio cuando cambia la versión.
+name: Publish desktop apps · Publicar versiones de escritorio
+
+on:
+  push:
+    branches: [main]
+    paths: [escritorio/neutralino.config.json]
+  workflow_dispatch:   # «Run workflow» to retry by hand · para relanzarlo a mano
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    # macOS: the Mac app needs an ad hoc signature, which only macOS can do;
+    # Windows and Linux are built here too.
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Version · Versión
+        id: version
+        run: |
+          v="v$(node -p "require('./escritorio/neutralino.config.json').version")"
+          echo "tag=$v" >> "$GITHUB_OUTPUT"
+          if gh release view "$v" >/dev/null 2>&1; then
+            echo "Ya publicada / already released: $v"
+            echo "nueva=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "nueva=si" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build · Empaquetar
+        if: steps.version.outputs.nueva == 'si'
+        run: ./escritorio/empaquetar.sh
+
+      - name: Release · Publicar
+        if: steps.version.outputs.nueva == 'si'
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          gh release create "$tag" \
+            escritorio/salida/Visor-3D.exe \
+            escritorio/salida/Visor-3D-linux-x64.tar.gz \
+            escritorio/salida/Visor-3D-mac.zip \
+            --title "Visor 3D ${tag#v}" \
+            --notes-file escritorio/notas-version.md \
+            --generate-notes

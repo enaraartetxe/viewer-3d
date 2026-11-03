@@ -1681,7 +1681,7 @@ async function guardar(blob, nombre, descripcion, ext) {
       let carpeta = '';
       try { carpeta = await Neutralino.os.getPath(ext === 'png' ? 'pictures' : 'video'); } catch { /* sin carpeta */ }
       let ruta = await Neutralino.os.showSaveDialog('Guardar ' + descripcion.toLowerCase(), {
-        defaultPath: carpeta ? `${carpeta}\\${nombre}` : nombre,
+        defaultPath: carpeta ? `${carpeta}${SEP}${nombre}` : nombre,
         filters: [{ name: descripcion, extensions: [ext] }],
       });
       if (!ruta) return;
@@ -1867,6 +1867,7 @@ renderer.setAnimationLoop((tiempo) => {
 // llega su ruta como argumento. Se lee el archivo y, si no es autocontenido,
 // también lo que tiene al lado (texturas, .bin, .mtl…).
 
+const SEP = window.NL_OS === 'Windows' ? '\\' : '/';
 const EXT_RECURSO = new Set(['bin', 'png', 'jpg', 'jpeg', 'webp', 'avif', 'ktx2', 'tga', 'bmp', 'gif', 'mtl']);
 const LIMITE_VECINOS = 400 * 1024 ** 2;
 
@@ -1880,7 +1881,7 @@ async function vecinos(carpeta, prefijo = '', nivel = 0, cuenta = { bytes: 0 }) 
   try { entradas = await Neutralino.filesystem.readDirectory(carpeta); } catch { return lista; }
   for (const e of entradas) {
     if (e.entry === '.' || e.entry === '..') continue;
-    const ruta = carpeta + '\\' + e.entry;
+    const ruta = e.path || carpeta + SEP + e.entry;
     if (e.type === 'DIRECTORY') {
       if (nivel < 2) lista.push(...await vecinos(ruta, prefijo + e.entry + '/', nivel + 1, cuenta));
     } else if (EXT_RECURSO.has(extension(e.entry)) && cuenta.bytes < LIMITE_VECINOS) {
@@ -1993,7 +1994,7 @@ function alternarMenu(boton, menu) {
   return abrirlo;
 }
 function cerrarMenus() {
-  for (const [boton, menu] of [['pastilla', 'menu-recientes'], ['btn-ajustes', 'menu-ajustes'], ['btn-clips', 'menu-clips']]) {
+  for (const [boton, menu] of [['pastilla', 'menu-recientes'], ['btn-ajustes', 'menu-ajustes'], ['btn-clips', 'menu-clips'], ['btn-escritorio', 'menu-escritorio']]) {
     $(menu).hidden = true;
     $(boton).setAttribute('aria-expanded', 'false');
   }
@@ -2003,11 +2004,22 @@ addEventListener('pointerdown', (e) => {
 });
 $('pastilla').addEventListener('click', () => alternarMenu($('pastilla'), $('menu-recientes')));
 $('btn-ajustes').addEventListener('click', () => {
-  if (alternarMenu($('btn-ajustes'), $('menu-ajustes')) && !$('ajustes-windows').hidden) pintarAsociacion();
+  if (alternarMenu($('btn-ajustes'), $('menu-ajustes')) && !$('ajustes-sistema').hidden) pintarAsociacion();
 });
+$('btn-escritorio').addEventListener('click', () => alternarMenu($('btn-escritorio'), $('menu-escritorio')));
 $('btn-borrar-recientes').addEventListener('click', () => { guardarRecientes([]); cerrarMenus(); });
 
-// ── Asociar los archivos 3D (doble clic en el Explorador) ───────
+// ── Asociar los archivos 3D (doble clic en el explorador de archivos) ──
+// Cada sistema a su manera; los botones del engranaje son los mismos.
+
+const ejecutar = (orden) => Neutralino.os.execCommand(orden);
+const EXT_ASOCIADAS = ['glb', 'gltf', 'fbx', 'obj', 'stl', 'dae', 'usdz', '3mf', 'ply'];
+
+const asociar = () => (window.NL_OS === 'Linux' ? asociarLinux() : asociarWindows());
+const desasociar = () => (window.NL_OS === 'Linux' ? desasociarLinux() : desasociarWindows());
+const estaAsociado = () => (window.NL_OS === 'Linux' ? estaAsociadoLinux() : estaAsociadoWindows());
+
+// ── Windows
 // Sin instalador: el .exe se copia a %LOCALAPPDATA%\Programs\Visor 3D (para que
 // la asociación no se rompa si se mueve o se borra el descargado), se registra
 // en HKEY_CURRENT_USER (no pide administrador) y se crea el acceso del menú
@@ -2016,7 +2028,6 @@ $('btn-borrar-recientes').addEventListener('click', () => { guardarRecientes([])
 
 const PROGID = 'Visor3D.Modelo';
 const EXE = 'Visor-3D.exe';
-const EXT_ASOCIADAS = ['glb', 'gltf', 'fbx', 'obj', 'stl', 'dae', 'usdz', '3mf', 'ply'];
 const CLASES = 'HKEY_CURRENT_USER\\Software\\Classes';
 
 async function rutasInstalacion() {
@@ -2034,9 +2045,7 @@ function rutaEjecutable() {
   return /^([a-z]:|\\\\)/i.test(ruta) ? ruta : `${window.NL_CWD}\\${ruta}`;
 }
 
-const ejecutar = (orden) => Neutralino.os.execCommand(orden);
-
-async function estaAsociado() {
+async function estaAsociadoWindows() {
   const r = await ejecutar(`reg query "${CLASES}\\${PROGID}\\shell\\open\\command" /ve`);
   return r.exitCode === 0;
 }
@@ -2060,7 +2069,7 @@ async function importarReg(lineas) {
 
 const cadenaReg = (texto) => '"' + texto.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
 
-async function asociar() {
+async function asociarWindows() {
   const destino = await rutasInstalacion();
   const origen = rutaEjecutable();
   if (origen.toLowerCase() !== destino.exe.toLowerCase()) {
@@ -2104,7 +2113,7 @@ async function asociar() {
   await ejecutar('ie4uinit.exe -show').catch(() => {});
 }
 
-async function desasociar() {
+async function desasociarWindows() {
   const destino = await rutasInstalacion();
   const lineas = [`[-${CLASES}\\${PROGID}]`, `[-${CLASES}\\Applications\\${EXE}]`];
   for (const ext of EXT_ASOCIADAS) lineas.push(`[${CLASES}\\.${ext}\\OpenWithProgids]`, `"${PROGID}"=-`);
@@ -2121,6 +2130,136 @@ async function desasociar() {
     await Neutralino.filesystem.remove(destino.carpeta).catch(() => {});
   }
   await ejecutar('ie4uinit.exe -show').catch(() => {});
+}
+
+// ── Linux (freedesktop): sin contraseña, todo en la carpeta del usuario.
+// El binario se copia a ~/.local/share/visor-3d (para que la asociación no se
+// rompa si se mueve el descargado), se crea su .desktop para el menú de
+// aplicaciones, se declaran los tipos de archivo y se elige Visor 3D para
+// abrirlos. Si el gestor de archivos ya usaba otra app, la nota explica cómo
+// cambiarla.
+
+const TIPOS_LINUX = [
+  ['model/gltf-binary', 'glb', 'Modelo glTF binario'],
+  ['model/gltf+json', 'gltf', 'Modelo glTF'],
+  ['application/vnd.autodesk.fbx', 'fbx', 'Modelo FBX'],
+  ['model/obj', 'obj', 'Modelo OBJ'],
+  ['model/stl', 'stl', 'Modelo STL'],
+  ['model/vnd.collada+xml', 'dae', 'Modelo COLLADA'],
+  ['model/vnd.usdz+zip', 'usdz', 'Modelo USDZ'],
+  ['model/3mf', '3mf', 'Modelo 3MF'],
+  ['model/x-ply', 'ply', 'Modelo PLY'],
+];
+const DESKTOP = 'visor-3d.desktop';
+const enComillasSh = (t) => "'" + t.replace(/'/g, "'\\''") + "'";
+const carpetaDe = (ruta) => ruta.replace(/\/[^/]*$/, '');
+
+async function variable(nombre) {
+  try { return await Neutralino.os.getEnv(nombre); } catch { return ''; }
+}
+
+async function rutasLinux() {
+  const casa = await variable('HOME');
+  const datos = (await variable('XDG_DATA_HOME')) || `${casa}/.local/share`;
+  const config = (await variable('XDG_CONFIG_HOME')) || `${casa}/.config`;
+  return {
+    datos,
+    carpeta: `${datos}/visor-3d`,
+    exe: `${datos}/visor-3d/Visor-3D`,
+    escritorio: `${datos}/applications/${DESKTOP}`,
+    tipos: `${datos}/mime/packages/visor-3d.xml`,
+    icono: `${datos}/icons/hicolor/256x256/apps/visor-3d.png`,
+    preferidas: `${config}/mimeapps.list`,
+  };
+}
+
+// La ruta real del programa que está abierto (NL_ARGS[0] puede ser relativa)
+async function ejecutableLinux() {
+  const r = await ejecutar(`readlink -f /proc/${window.NL_PID}/exe`).catch(() => null);
+  const ruta = r?.stdOut?.trim();
+  if (ruta) return ruta;
+  const arg = (window.NL_ARGS || [])[0] || '';
+  return arg.startsWith('/') ? arg : `${window.NL_CWD}/${arg.replace(/^\.\//, '')}`;
+}
+
+async function estaAsociadoLinux() {
+  const { escritorio } = await rutasLinux();
+  return Neutralino.filesystem.getStats(escritorio).then(() => true, () => false);
+}
+
+async function asociarLinux() {
+  const d = await rutasLinux();
+  const origen = await ejecutableLinux();
+  const carpetas = [d.carpeta, carpetaDe(d.escritorio), carpetaDe(d.tipos), carpetaDe(d.icono)];
+  await ejecutar(`mkdir -p ${carpetas.map(enComillasSh).join(' ')}`);
+  if (origen !== d.exe) {
+    const r = await ejecutar(`cp -f ${enComillasSh(origen)} ${enComillasSh(d.exe)} && chmod +x ${enComillasSh(d.exe)}`);
+    // Si la copia instalada está abierta en otra ventana no se puede sustituir,
+    // pero la que hay sirve igual
+    const existe = await Neutralino.filesystem.getStats(d.exe).then(() => true, () => false);
+    if (r.exitCode !== 0 && !existe) throw new Error(r.stdErr || 'no se ha podido copiar el programa');
+  }
+
+  const icono = await (await fetch('icono.png')).arrayBuffer();
+  await Neutralino.filesystem.writeBinaryFile(d.icono, icono);
+
+  const tipos = TIPOS_LINUX.map(([tipo]) => tipo);
+  const exe = d.exe.replace(/(["`$\\])/g, '\\$1');
+  await Neutralino.filesystem.writeFile(d.escritorio, [
+    '[Desktop Entry]',
+    'Type=Application',
+    'Name=Visor 3D',
+    'Comment=Visor de modelos 3D: GLB, glTF, FBX, OBJ, USDZ…',
+    `Exec="${exe}" %F`,
+    'Icon=visor-3d',
+    'Terminal=false',
+    'Categories=Graphics;3DGraphics;Viewer;',
+    `MimeType=${tipos.join(';')};`,
+    '',
+  ].join('\n'));
+
+  // Tipos de archivo, por si el sistema no conoce alguno (FBX, USDZ, PLY…)
+  const xml = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  await Neutralino.filesystem.writeFile(d.tipos, [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">',
+    ...TIPOS_LINUX.map(([tipo, ext, nombre]) =>
+      `  <mime-type type="${tipo}"><comment>${xml(nombre)}</comment><glob pattern="*.${ext}"/></mime-type>`),
+    '</mime-info>',
+    '',
+  ].join('\n'));
+
+  // Que el sistema se entere; cada orden puede no existir en algún escritorio
+  await ejecutar([
+    `update-mime-database ${enComillasSh(d.datos + '/mime')}`,
+    `update-desktop-database ${enComillasSh(d.datos + '/applications')}`,
+    `xdg-mime default ${DESKTOP} ${tipos.join(' ')}`,
+    `gtk-update-icon-cache -q ${enComillasSh(d.datos + '/icons/hicolor')}`,
+  ].map((o) => `(${o}) >/dev/null 2>&1`).join('; '));
+}
+
+async function desasociarLinux() {
+  const d = await rutasLinux();
+  const ordenes = [
+    `rm -f ${[d.escritorio, d.tipos, d.icono].map(enComillasSh).join(' ')}`,
+    // Quita Visor 3D de las aplicaciones preferidas sin tocar las demás
+    `[ -f ${enComillasSh(d.preferidas)} ] && sed -i 's/${DESKTOP.replace('.', '\\.')};\\?//g' ${enComillasSh(d.preferidas)}`,
+    `update-mime-database ${enComillasSh(d.datos + '/mime')}`,
+    `update-desktop-database ${enComillasSh(d.datos + '/applications')}`,
+  ];
+  // La copia instalada se borra si no es la que está abierta ahora
+  if (await ejecutableLinux() !== d.exe) ordenes.push(`rm -rf ${enComillasSh(d.carpeta)}`);
+  await ejecutar(ordenes.map((o) => `(${o}) >/dev/null 2>&1`).join('; '));
+}
+
+// Textos del engranaje según el sistema (el HTML trae los de Windows)
+function textosSistema() {
+  if (window.NL_OS !== 'Linux') return;
+  $('sistema-nombre').textContent = 'Linux';
+  $('sistema-texto').textContent = 'Los .glb, .gltf, .fbx, .obj, .stl, .dae, .usdz, .3mf y .ply se abrirán con Visor 3D. '
+    + 'Se instala en tu usuario (~/.local), sin contraseña, y aparece en el menú de aplicaciones.';
+  $('nota-asociacion').textContent = 'Si tu gestor de archivos sigue usando otra aplicación: clic derecho en el archivo → '
+    + 'Abrir con → Visor 3D, y márcala como predeterminada.';
 }
 
 async function pintarAsociacion(asociado) {
@@ -2155,7 +2294,9 @@ if (window.Neutralino) {
   document.documentElement.classList.add('es-exe');
   $('pastilla').disabled = false;
   $('ajustes-recientes').hidden = false;
-  $('ajustes-windows').hidden = window.NL_OS !== 'Windows'; // registro y menú Inicio: solo Windows
+  // Asociar archivos: Windows y Linux (en Mac se declara en el propio .app)
+  $('ajustes-sistema').hidden = !['Windows', 'Linux'].includes(window.NL_OS);
+  textosSistema();
   leerRecientes().then(pintarRecientes);
   const rutas = (window.NL_ARGS || []).slice(1).filter((a) => !a.startsWith('--'));
   if (rutas.length) abrirDesdeEscritorio(rutas);

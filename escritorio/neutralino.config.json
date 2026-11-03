@@ -1,6 +1,6 @@
 {
   "applicationId": "com.enaraartetxe.visor3d",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "applicationName": "Visor 3D",
   "description": "Visor 3D",
   "author": "Enara Artetxe",
@@ -18,7 +18,7 @@
   "nativeAllowList": [
     "app.*", "window.*", "storage.*",
     "os.getPath", "os.getEnv", "os.showOpenDialog", "os.showSaveDialog", "os.execCommand",
-    "filesystem.readBinaryFile", "filesystem.readDirectory", "filesystem.writeBinaryFile",
+    "filesystem.readBinaryFile", "filesystem.readDirectory", "filesystem.writeBinaryFile", "filesystem.writeFile",
     "filesystem.copy", "filesystem.createDirectory", "filesystem.remove", "filesystem.getStats"
   ],
   "modes": {

@@ -1,18 +1,98 @@
 # Visor 3D
 
-Visor de modelos 3D para Windows y para el navegador: arrastras un modelo y lo
-ves, con sus texturas y animaciones.
+**English** · [Castellano](#castellano)
 
-![Visor 3D con el rover Curiosity abierto](miniatura.webp)
+A 3D model viewer for Windows, Linux, Mac and the browser: drop a model in and
+see it, with its textures and animations.
 
-**[Descargar para Windows](https://github.com/enaraartetxe/visor-3d/releases/latest/download/Visor-3D.exe)**
-· **[Usar en el navegador](https://enaraartetxe.com/experimentos/visor-3d/)**
+![Visor 3D with the Curiosity rover open](miniatura.webp)
 
-Un solo `.exe`, sin instalador ni conexión. Funciona en Windows 10 y 11, que
-traen WebView2. Como el ejecutable no está firmado, la primera vez Windows
-puede avisar: «Más información» → «Ejecutar de todas formas».
+**Download:** [Windows](https://github.com/enaraartetxe/viewer-3d/releases/latest/download/Visor-3D.exe)
+· [Linux](https://github.com/enaraartetxe/viewer-3d/releases/latest/download/Visor-3D-linux-x64.tar.gz)
+· [Mac](https://github.com/enaraartetxe/viewer-3d/releases/latest/download/Visor-3D-mac.zip) (not tested on a real Mac yet)
+· **[Use it in the browser](https://enaraartetxe.com/experimentos/viewer-3d/)**
 
-## Qué hace
+One file per system, no installer, works offline. The interface is in Spanish.
+
+- **Windows 10/11**: it isn't signed, so the first time Windows may warn:
+  «More info» → «Run anyway».
+- **Linux x64**: needs WebKitGTK (`sudo apt install libwebkit2gtk-4.1-0` on
+  Ubuntu/Debian/Mint, `sudo dnf install webkit2gtk4.1` on Fedora).
+- **macOS 11+**: not signed by Apple. After the first attempt to open it:
+  System Settings → Privacy & Security → «Open Anyway».
+
+## What it does
+
+- Opens GLB and glTF (also compressed with Draco, Meshopt or KTX2), ZIP files
+  with a glTF inside, FBX, OBJ, STL, DAE, USDZ, 3MF and PLY.
+- Animations: pick one, chain them all, loop, speed. If they move the model,
+  the camera follows it.
+- Inspection: clay, UV grid, normals and each material channel (colour,
+  roughness, metalness, normal map, occlusion, emission).
+- HDRI environments (built-in or your own), backgrounds, light and effects
+  (ambient occlusion, bloom, depth of field).
+- The model's parts (hide, frame), morph targets and the file's cameras.
+- Dimensions, a ruler between two points, glTF validation with Khronos'
+  official validator and a texture report.
+- PNG screenshots and a video turning around the model.
+- Light, dark and high-contrast themes.
+- On Windows and Linux: open models with a double click (from the gear icon)
+  and recent files.
+
+## How it's made
+
+Plain HTML, CSS and JavaScript (no build step), with
+[three.js](https://threejs.org). The desktop apps are the same page inside a
+[Neutralino](https://neutralino.js.org) window.
+
+- `index.html`, `estilo.css`, `main.js`: the app. To try it, serve the folder
+  with any local server (for example `npx servez`).
+- `escritorio/`: desktop packaging. `escritorio/empaquetar.sh` builds the apps
+  into `escritorio/salida/`; details in [escritorio/README.md](escritorio/README.md).
+- Releases are automatic: when the version in
+  `escritorio/neutralino.config.json` changes, GitHub Actions builds the three
+  apps on a Mac runner and publishes them
+  ([.github/workflows/publicar.yml](.github/workflows/publicar.yml)).
+
+## Made with AI
+
+Idea, design, direction and testing: Enara Artetxe. Code written with
+**Claude Opus 5.5** (Anthropic), credited as co-author in the commits.
+
+## Licences
+
+Code under the [MIT](LICENSE) licence. It includes or downloads:
+
+- [three.js](https://github.com/mrdoob/three.js) (MIT).
+- [Neutralino](https://github.com/neutralinojs/neutralinojs) (MIT).
+- [glTF-Validator](https://github.com/KhronosGroup/glTF-Validator) by Khronos
+  (Apache 2.0).
+- The HDRI environments are from [Poly Haven](https://polyhaven.com) (CC0); see
+  [entornos/CREDITOS.md](entornos/CREDITOS.md).
+- Model in the picture: [Curiosity Rover 3D Model](https://science.nasa.gov/resource/curiosity-rover-3d-model/), by NASA.
+
+---
+
+## Castellano
+
+Visor de modelos 3D para Windows, Linux, Mac y el navegador: arrastras un
+modelo y lo ves, con sus texturas y animaciones.
+
+**Descargar:** [Windows](https://github.com/enaraartetxe/viewer-3d/releases/latest/download/Visor-3D.exe)
+· [Linux](https://github.com/enaraartetxe/viewer-3d/releases/latest/download/Visor-3D-linux-x64.tar.gz)
+· [Mac](https://github.com/enaraartetxe/viewer-3d/releases/latest/download/Visor-3D-mac.zip) (sin probar todavía en un Mac de verdad)
+· **[Usar en el navegador](https://enaraartetxe.com/experimentos/viewer-3d/)**
+
+Un archivo por sistema, sin instalador y sin conexión.
+
+- **Windows 10/11**: no está firmado; la primera vez Windows puede avisar:
+  «Más información» → «Ejecutar de todas formas».
+- **Linux x64**: necesita WebKitGTK (`sudo apt install libwebkit2gtk-4.1-0` en
+  Ubuntu/Debian/Mint, `sudo dnf install webkit2gtk4.1` en Fedora).
+- **macOS 11+**: no está firmado por Apple. Tras el primer intento de abrirlo:
+  Ajustes del Sistema → Privacidad y seguridad → «Abrir igualmente».
+
+### Qué hace
 
 - Abre GLB y glTF (también comprimidos con Draco, Meshopt o KTX2), ZIP con un
   glTF dentro, FBX, OBJ, STL, DAE, USDZ, 3MF y PLY.
@@ -28,26 +108,30 @@ puede avisar: «Más información» → «Ejecutar de todas formas».
   Khronos e informe de texturas.
 - Captura en PNG y vídeo girando alrededor del modelo.
 - Temas claro, oscuro y alto contraste.
-- En Windows: abrir los modelos con doble clic (desde el engranaje) y
+- En Windows y Linux: abrir los modelos con doble clic (desde el engranaje) y
   archivos recientes.
 
-## Cómo está hecho
+### Cómo está hecho
 
-HTML, CSS y JavaScript sin compilar, con [three.js](https://threejs.org).
-La versión de Windows es la misma página dentro de una ventana de
+HTML, CSS y JavaScript sin compilar, con [three.js](https://threejs.org). Los
+programas de escritorio son la misma página dentro de una ventana de
 [Neutralino](https://neutralino.js.org).
 
 - `index.html`, `estilo.css`, `main.js`: la aplicación. Para probarla, sirve la
   carpeta con cualquier servidor local (por ejemplo `npx servez`).
-- `windows/empaquetar.sh`: genera `windows/salida/Visor-3D.exe`. Necesita node
-  y npm; detalles en [windows/README.md](windows/README.md).
+- `escritorio/`: empaquetado de escritorio. `escritorio/empaquetar.sh` genera
+  los programas en `escritorio/salida/`; detalles en
+  [escritorio/README.md](escritorio/README.md).
+- Las versiones se publican solas: al cambiar la versión de
+  `escritorio/neutralino.config.json`, GitHub Actions genera los tres programas
+  en un Mac y los publica ([.github/workflows/publicar.yml](.github/workflows/publicar.yml)).
 
-## Hecho con IA
+### Hecho con IA
 
 Idea, diseño, dirección y pruebas: Enara Artetxe. Código escrito con
 **Claude Opus 5.5** (Anthropic), que figura como coautor en los commits.
 
-## Licencias
+### Licencias
 
 Código bajo licencia [MIT](LICENSE). Incluye o descarga:
 
@@ -57,4 +141,4 @@ Código bajo licencia [MIT](LICENSE). Incluye o descarga:
   (Apache 2.0).
 - Los entornos HDRI son de [Poly Haven](https://polyhaven.com) (CC0); ver
   [entornos/CREDITOS.md](entornos/CREDITOS.md).
-- Modelo de la imagen: Curiosity, de la NASA.
+- Modelo de la imagen: [Curiosity Rover 3D Model](https://science.nasa.gov/resource/curiosity-rover-3d-model/), de la NASA.

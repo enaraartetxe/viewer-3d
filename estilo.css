@@ -161,6 +161,24 @@ kbd {
   min-width: 0;
 }
 .barra__hueco { flex: 1; }
+.es-exe .solo-web { display: none; }
+
+/* «Versión de escritorio» (solo en la web): pastilla como la del nombre */
+.barra__enlace {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px 0 10px;
+  border: 1px solid var(--raya-fuerte);
+  border-radius: 17px;
+  font-size: 13px;
+  color: var(--tinta);
+  transition: border-color .15s;
+}
+.barra__enlace svg { width: 17px; height: 17px; }
+.barra__enlace:hover,
+.barra__enlace[aria-expanded="true"] { border-color: var(--tinta-suave); }
 
 .pastilla {
   display: flex;
@@ -232,6 +250,21 @@ kbd {
   color: var(--tinta-suave);
   border-bottom: 1px solid var(--raya);
 }
+
+/* Enlace a lo ancho al pie de un menú (código en GitHub) */
+.menu__enlace {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 18px;
+  color: var(--tinta);
+  text-decoration: none;
+  transition: background .12s;
+}
+.menu__enlace:hover { background: var(--gris); }
+.menu__enlace svg { width: 16px; height: 16px; }
+svg.relleno { fill: currentColor; stroke: none; }
 
 /* Lista sencilla (recientes, borrar) */
 .lista {
@@ -326,6 +359,9 @@ kbd {
 .ajuste__estado.activo::before { background: var(--hecho); border-color: var(--hecho); }
 .ajuste__boton {
   margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
   height: 34px;
   padding: 0 18px;
   background: var(--acento);
@@ -347,6 +383,7 @@ kbd {
   color: var(--tinta-suave);
 }
 .ajuste__nota[hidden] { display: none; }
+.ajuste__nota code { font-family: Consolas, monospace; font-size: 11px; user-select: all; }
 
 /* ── Cuerpo: mosaicos · visor · panel ───────────────────────── */
 
@@ -1233,14 +1270,18 @@ input[type="range"]:focus-visible { outline-offset: 2px; }
 :root:not([data-tema="contraste"]) .textura__aviso { color: var(--acento-2); }
 
 /* Ayuda */
-.ayuda { width: min(820px, 100%); }
+/* La ayuda cabe entera sin barra: más alta que los informes y textos cortos */
+.informe__caja.ayuda {
+  width: min(860px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+}
 .ayuda__titulo {
   margin: 0;
   font-size: 22px;
   font-weight: var(--peso-fino);
   color: var(--tinta);
 }
-.ayuda__cuerpo { padding-top: 18px; }
+.ayuda__cuerpo { padding: 18px 26px 22px; }
 .ayuda__entrada {
   margin: 0 0 20px;
   font-size: 16px;
@@ -1250,7 +1291,7 @@ input[type="range"]:focus-visible { outline-offset: 2px; }
 .ayuda__bloques {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 18px 26px;
+  gap: 16px 28px;
 }
 .ayuda h2 {
   margin: 0 0 6px;
@@ -1261,23 +1302,24 @@ input[type="range"]:focus-visible { outline-offset: 2px; }
   color: var(--acento-2);
 }
 :root[data-tema="contraste"] .ayuda h2 { color: var(--acento); }
-.ayuda p { margin: 0 0 8px; line-height: 1.55; color: var(--tinta-suave); }
+.ayuda p { margin: 0 0 6px; font-size: 13px; line-height: 1.5; color: var(--tinta-suave); }
 .ayuda .solo-exe { display: none; }
 .es-exe .ayuda .solo-exe { display: block; }
-.ayuda__subtitulo { margin-top: 24px !important; }
+.ayuda__subtitulo { margin-top: 20px !important; }
 .atajos {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 6px 26px;
+  gap: 4px 28px;
   margin: 0;
+  font-size: 13px;
 }
 .atajos div { display: flex; align-items: center; gap: 10px; }
-.atajos dt { min-width: 64px; color: var(--tinta-tenue); }
+.atajos dt { min-width: 52px; color: var(--tinta-tenue); }
 .atajos dd { margin: 0; color: var(--tinta); }
 .atajos kbd { font-size: 11px; }
 .ayuda__empezar {
   display: block;
-  margin: 24px 0 0 auto;
+  margin: 18px 0 0 auto;
   height: 40px;
   padding: 0 34px;
   background: var(--acento);
@@ -1296,6 +1338,8 @@ input[type="range"]:focus-visible { outline-offset: 2px; }
 }
 @media (max-width: 860px) {
   .lateral { display: none; }
+  .barra__enlace span { display: none; }
+  .barra__enlace { padding: 0 8px; }
 }
 @media (max-width: 560px) {
   .reproductor__tiempo, #btn-bucle, #btn-todas { display: none; }
