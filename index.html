@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Visor 3D</title>
+  <link rel="icon" href="icono.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="estilo.css">
+  <script type="importmap">
+    { "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <header class="barra">
+    <div class="desplegable desplegable--pastilla">
+      <button class="pastilla" id="pastilla" disabled aria-haspopup="true" aria-expanded="false">
+        <svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/></svg>
+        <span id="nombre-archivo">Ningún modelo abierto</span>
+        <svg class="pastilla__flecha" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="menu" id="menu-recientes" hidden>
+        <div class="menu__cabecera">Recientes</div>
+        <ul class="lista" id="lista-recientes"></ul>
+      </div>
+    </div>
+
+    <span class="barra__hueco"></span>
+
+    <button class="icono" id="btn-ayuda" title="Ayuda (F1)" aria-label="Ayuda">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.2-2.5 3.9"/><path d="M12 17.2v.1"/></svg>
+    </button>
+
+    <div class="desplegable">
+      <button class="icono" id="btn-ajustes" title="Ajustes" aria-label="Ajustes" aria-haspopup="true" aria-expanded="false">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
+      <div class="menu menu--ajustes" id="menu-ajustes" hidden>
+        <div class="menu__cabecera">Apariencia</div>
+        <div class="segmentos" id="temas" role="radiogroup" aria-label="Apariencia">
+          <button role="radio" aria-checked="true" data-tema="auto" title="Como el sistema">Auto</button>
+          <button role="radio" aria-checked="false" data-tema="claro">Claro</button>
+          <button role="radio" aria-checked="false" data-tema="oscuro">Oscuro</button>
+          <button role="radio" aria-checked="false" data-tema="contraste">Contraste</button>
+        </div>
+
+        <div id="ajustes-windows" hidden>
+          <div class="menu__cabecera">Windows</div>
+          <div class="ajuste">
+            <p class="ajuste__titulo">Abrir los modelos con doble clic</p>
+            <p class="ajuste__texto">Los .glb, .gltf, .fbx, .obj, .stl, .dae, .usdz, .3mf y .ply se abrirán con Visor 3D. Se instala en tu usuario (sin permisos de administrador) y aparece en el menú Inicio.</p>
+            <p class="ajuste__estado" id="estado-asociacion"></p>
+            <button class="ajuste__boton" id="btn-asociar">Asociar</button>
+            <p class="ajuste__nota" id="nota-asociacion" hidden>Si Windows pregunta con qué abrirlos o sigue usando otra aplicación: clic derecho en el archivo → Abrir con → Elegir otra aplicación → Visor 3D → Siempre.</p>
+          </div>
+        </div>
+
+        <div id="ajustes-recientes" hidden>
+          <ul class="lista">
+            <li id="btn-borrar-recientes">Borrar la lista de recientes</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <button class="abrir" id="btn-abrir" title="Abrir modelo (O)">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      <span>Abrir</span>
+    </button>
+    <input type="file" id="selector" multiple hidden
+           accept=".glb,.gltf,.zip,.fbx,.obj,.mtl,.stl,.dae,.usdz,.usda,.usdc,.usd,.3mf,.ply,.bin,.png,.jpg,.jpeg,.webp,.ktx2,.tga,.hdr,.exr">
+  </header>
+
+  <div class="cuerpo">
+    <aside class="lateral">
+      <div class="mosaicos">
+        <section class="mosaico">
+          <h2><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/></svg>Modelo</h2>
+          <p class="mosaico__grande" id="dato-formato">—</p>
+          <p class="mosaico__pie" id="dato-peso">Arrastra un archivo para empezar</p>
+          <button class="mosaico__enlace" id="btn-validacion" hidden></button>
+        </section>
+        <section class="mosaico">
+          <h2><svg viewBox="0 0 24 24"><path d="M4 19L12 5l8 14z"/></svg>Geometría</h2>
+          <p class="mosaico__grande" id="dato-triangulos">—</p>
+          <p class="mosaico__pie" id="dato-vertices">triángulos</p>
+          <p class="mosaico__pie" id="dato-medidas"></p>
+        </section>
+        <section class="mosaico">
+          <h2><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16"/></svg>Materiales</h2>
+          <p class="mosaico__grande" id="dato-materiales">—</p>
+          <p class="mosaico__pie" id="dato-texturas">texturas</p>
+          <button class="mosaico__enlace" id="btn-ver-texturas" hidden>Ver texturas</button>
+        </section>
+      </div>
+
+      <!-- Lo que trae el modelo -->
+      <div class="lateral__secciones">
+        <p class="lateral__vacio" id="lateral-vacio">Aquí aparecerán las piezas del modelo y, si las trae, sus formas y cámaras.</p>
+        <section class="seccion" id="seccion-formas" hidden>
+          <div class="seccion__cabecera">
+            <button class="plegar" id="btn-plegar-formas" aria-expanded="true" aria-controls="cuerpo-formas" title="Morph targets / shape keys">
+              <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+              <span>Formas</span>
+              <span class="plegar__cuenta" id="num-formas">0</span>
+            </button>
+            <button class="todas" id="btn-restablecer-formas" title="Todas a 0">
+              <span>Poner a 0</span>
+            </button>
+          </div>
+          <div class="seccion__cuerpo" id="cuerpo-formas"></div>
+        </section>
+
+        <section class="seccion" id="seccion-camaras" hidden>
+          <div class="seccion__cabecera">
+            <button class="plegar" aria-expanded="true" aria-controls="cuerpo-camaras">
+              <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+              <span>Cámaras</span>
+              <span class="plegar__cuenta" id="num-camaras">0</span>
+            </button>
+          </div>
+          <div class="seccion__cuerpo" id="cuerpo-camaras" role="radiogroup" aria-label="Cámara"></div>
+        </section>
+
+        <section class="seccion" id="seccion-piezas" hidden>
+          <div class="seccion__cabecera">
+            <button class="plegar" id="btn-plegar-piezas" aria-expanded="true" aria-controls="cuerpo-piezas" title="Árbol de la escena">
+              <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+              <span>Piezas</span>
+              <span class="plegar__cuenta" id="num-piezas">0</span>
+            </button>
+          </div>
+          <div class="seccion__cuerpo arbol" id="cuerpo-piezas"></div>
+        </section>
+      </div>
+    </aside>
+
+    <main class="visor" id="visor">
+      <canvas id="lienzo"></canvas>
+      <div class="cotas" id="cotas" aria-hidden="true"></div>
+
+      <div class="vacio" id="vacio">
+        <button class="vacio__circulo" id="btn-vacio" aria-label="Abrir modelo">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <p class="vacio__titulo">Arrastra aquí tu modelo</p>
+        <p class="vacio__formatos">GLB · glTF · ZIP · FBX · OBJ · STL · DAE · USDZ · 3MF · PLY</p>
+        <ul class="vacio__recientes" id="vacio-recientes" hidden></ul>
+      </div>
+
+      <div class="soltar" id="soltar"><p>Suelta para abrir</p></div>
+
+      <div class="cargando" id="cargando" hidden>
+        <p id="cargando-texto">Cargando…</p>
+        <div class="cargando__barra"><span></span></div>
+      </div>
+
+      <div class="aviso" id="aviso" role="status" hidden></div>
+
+      <!-- Herramientas flotando sobre la escena; arriba, solo archivo y ajustes -->
+      <div class="herramientas" role="toolbar" aria-label="Herramientas">
+        <button class="icono" id="btn-encuadrar" title="Encuadrar (F)" aria-label="Encuadrar" disabled>
+          <svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/><circle cx="12" cy="12" r="2.5"/></svg>
+        </button>
+        <button class="icono" id="btn-medir" title="Medir entre dos puntos (M)" aria-label="Medir entre dos puntos" aria-pressed="false" disabled>
+          <svg viewBox="0 0 24 24"><path d="M3 17L17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg>
+        </button>
+        <button class="icono" id="btn-captura" title="Guardar captura (C)" aria-label="Guardar captura" disabled>
+          <svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+        </button>
+        <button class="icono" id="btn-video" title="Grabar vídeo girando (V)" aria-label="Grabar vídeo girando" disabled>
+          <svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="1"/><path d="M16 10.5l5-3v9l-5-3"/></svg>
+        </button>
+        <button class="icono" id="btn-pantalla" title="Pantalla completa" aria-label="Pantalla completa">
+          <svg viewBox="0 0 24 24"><path d="M9 4H4v5M20 9V4h-5M15 20h5v-5M4 15v5h5"/></svg>
+        </button>
+      </div>
+
+      <!-- Reproductor flotante; la lista de animaciones se despliega hacia arriba -->
+      <div class="reproductor" id="reproductor" hidden>
+        <button class="reproductor__boton" id="btn-play" title="Reproducir / pausa (espacio)" aria-label="Reproducir o pausar">
+          <svg class="si-pausa" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg>
+          <svg class="si-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>
+        </button>
+        <div class="desplegable desplegable--clips">
+          <button class="reproductor__clip" id="btn-clips" title="Elegir animación" aria-haspopup="true" aria-expanded="false">
+            <span id="clip-nombre">—</span>
+            <svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>
+          </button>
+          <div class="menu menu--arriba" id="menu-clips" hidden>
+            <div class="menu__cabecera menu__cabecera--cuenta"><span>Animaciones</span><span id="num-animaciones">0</span></div>
+            <div id="lista-animaciones" role="radiogroup" aria-label="Animación"></div>
+          </div>
+        </div>
+        <input type="range" id="clip-linea" min="0" max="1" step="0.001" value="0" aria-label="Línea de tiempo">
+        <span class="reproductor__tiempo" id="clip-tiempo">0:00.0 / 0:00.0</span>
+        <button class="reproductor__opcion" id="btn-todas" aria-pressed="false" title="Reproducir todas seguidas" aria-label="Todas seguidas" hidden>
+          <svg viewBox="0 0 24 24"><path d="M4 6h10M4 12h10M4 18h6"/><path d="M16 14.5v7l5-3.5z" fill="currentColor"/></svg>
+        </button>
+        <button class="reproductor__opcion" id="btn-bucle" aria-pressed="true" title="Repetir" aria-label="Repetir">
+          <svg viewBox="0 0 24 24"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>
+        </button>
+        <button class="reproductor__velocidad" id="btn-velocidad" title="Velocidad">1×</button>
+      </div>
+    </main>
+
+    <!-- Panel: cómo se mira. Secciones iguales y plegables; interruptores para
+         lo que se enciende y apaga, selección única (role="radio") para el resto -->
+    <aside class="panel">
+      <section class="seccion">
+        <div class="seccion__cabecera">
+          <button class="plegar" aria-expanded="true" aria-controls="cuerpo-vista">
+            <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+            <span>Vista</span>
+          </button>
+        </div>
+        <div class="seccion__cuerpo" id="cuerpo-vista">
+          <button class="interruptor" role="switch" aria-checked="false" data-opcion="girar" title="Tecla R">
+            <span>Rotación automática</span><span class="interruptor__pista"></span>
+          </button>
+          <button class="interruptor" role="switch" aria-checked="true" data-opcion="rejilla" title="Tecla G">
+            <span>Rejilla</span><span class="interruptor__pista"></span>
+          </button>
+          <button class="interruptor" role="switch" aria-checked="true" data-opcion="sombras">
+            <span>Sombras</span><span class="interruptor__pista"></span>
+          </button>
+          <button class="interruptor" role="switch" aria-checked="false" data-opcion="alambre" title="Tecla W">
+            <span>Alambre</span><span class="interruptor__pista"></span>
+          </button>
+          <button class="interruptor" role="switch" aria-checked="false" data-opcion="esqueleto">
+            <span>Esqueleto</span><span class="interruptor__pista"></span>
+          </button>
+          <button class="interruptor" role="switch" aria-checked="true" data-opcion="seguir" title="Si la animación desplaza el modelo, la cámara va detrás">
+            <span>Seguir la animación</span><span class="interruptor__pista"></span>
+          </button>
+          <button class="interruptor" role="switch" aria-checked="false" data-opcion="medidas" title="Caja del modelo con su ancho, alto y fondo">
+            <span>Medidas</span><span class="interruptor__pista"></span>
+          </button>
+        </div>
+      </section>
+
+      <section class="seccion">
+        <div class="seccion__cabecera">
+          <button class="plegar" aria-expanded="true" aria-controls="cuerpo-inspeccion">
+            <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+            <span>Inspección</span>
+          </button>
+        </div>
+        <div class="seccion__cuerpo" id="cuerpo-inspeccion">
+          <div class="modos" role="radiogroup" aria-label="Inspección">
+            <button role="radio" aria-checked="true" data-modo="materiales" title="Tecla 1">Materiales</button>
+            <button role="radio" aria-checked="false" data-modo="matcap" title="Solo la forma, como arcilla (tecla 2)">Arcilla</button>
+            <button role="radio" aria-checked="false" data-modo="uv" title="Para ver si las texturas se estiran o tienen costuras (tecla 3)">Cuadrícula UV</button>
+            <button role="radio" aria-checked="false" data-modo="normales" title="Hacia dónde mira cada cara (tecla 4)">Normales</button>
+            <span class="modos__etiqueta">Un canal del material</span>
+            <button role="radio" aria-checked="false" data-modo="color">Color</button>
+            <button role="radio" aria-checked="false" data-modo="rugosidad">Rugosidad</button>
+            <button role="radio" aria-checked="false" data-modo="metal">Metal</button>
+            <button role="radio" aria-checked="false" data-modo="mapa-normales">Relieve</button>
+            <button role="radio" aria-checked="false" data-modo="oclusion">Oclusión</button>
+            <button role="radio" aria-checked="false" data-modo="emision">Emisión</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="seccion">
+        <div class="seccion__cabecera">
+          <button class="plegar" aria-expanded="true" aria-controls="cuerpo-fondo">
+            <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+            <span>Fondo</span>
+          </button>
+        </div>
+        <div class="seccion__cuerpo muestras" id="cuerpo-fondo" role="radiogroup" aria-label="Fondo">
+          <button class="muestra" role="radio" aria-checked="true" data-fondo="claro"><span class="muestra__color"></span>Claro</button>
+          <button class="muestra" role="radio" aria-checked="false" data-fondo="atardecer"><span class="muestra__color"></span>Atardecer</button>
+          <button class="muestra" role="radio" aria-checked="false" data-fondo="oceano"><span class="muestra__color"></span>Océano</button>
+          <button class="muestra" role="radio" aria-checked="false" data-fondo="noche"><span class="muestra__color"></span>Noche</button>
+          <button class="muestra" role="radio" aria-checked="false" data-fondo="entorno" title="El HDRI elegido en Luz"><span class="muestra__color"></span>Entorno</button>
+        </div>
+      </section>
+
+      <section class="seccion">
+        <div class="seccion__cabecera">
+          <button class="plegar" aria-expanded="true" aria-controls="cuerpo-luz">
+            <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+            <span>Luz</span>
+          </button>
+        </div>
+        <div class="seccion__cuerpo" id="cuerpo-luz">
+          <div class="campo">
+            <span class="campo__etiqueta">Entorno</span>
+            <div class="segmentos segmentos--panel" id="entornos" role="radiogroup" aria-label="Entorno">
+              <button role="radio" aria-checked="true" data-entorno="estudio">Estudio</button>
+              <button role="radio" aria-checked="false" data-entorno="exterior">Exterior</button>
+              <button role="radio" aria-checked="false" data-entorno="atardecer">Atardecer</button>
+              <button role="radio" aria-checked="false" data-entorno="propio" hidden>Propio</button>
+            </div>
+            <button class="enlace" id="btn-hdri">Cargar un HDRI propio (.hdr, .exr)…</button>
+            <input type="file" id="selector-hdri" accept=".hdr,.exr" hidden>
+          </div>
+          <label class="deslizador">
+            <span class="deslizador__fila"><span>Intensidad</span><output id="valor-intensidad">1×</output></span>
+            <input type="range" id="luz-intensidad" min="0.2" max="2.5" step="0.01" value="1">
+          </label>
+          <label class="deslizador">
+            <span class="deslizador__fila"><span>Dirección</span><output id="valor-angulo">40°</output></span>
+            <input type="range" id="luz-angulo" min="0" max="360" step="1" value="40">
+          </label>
+        </div>
+      </section>
+
+      <section class="seccion">
+        <div class="seccion__cabecera">
+          <button class="plegar" aria-expanded="true" aria-controls="cuerpo-efectos">
+            <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+            <span>Efectos</span>
+          </button>
+        </div>
+        <div class="seccion__cuerpo" id="cuerpo-efectos">
+          <button class="interruptor" role="switch" aria-checked="false" data-efecto="ao" title="Sombras suaves en rincones y uniones">
+            <span>Oclusión ambiental</span><span class="interruptor__pista"></span>
+          </button>
+          <button class="interruptor" role="switch" aria-checked="false" data-efecto="bloom" title="Las zonas muy brillantes desprenden luz">
+            <span>Resplandor</span><span class="interruptor__pista"></span>
+          </button>
+          <button class="interruptor" role="switch" aria-checked="false" data-efecto="dof" title="Enfocado el centro de la vista; lo de delante y detrás, borroso">
+            <span>Desenfoque de fondo</span><span class="interruptor__pista"></span>
+          </button>
+        </div>
+      </section>
+
+
+
+    </aside>
+  </div>
+
+  <div class="informe" id="informe" hidden>
+    <div class="informe__caja" role="dialog" aria-modal="true" aria-label="Informe del modelo">
+      <div class="informe__cabecera">
+        <div class="segmentos segmentos--pestanas" role="tablist">
+          <button role="tab" aria-selected="true" data-pestana="validacion">Validación</button>
+          <button role="tab" aria-selected="false" data-pestana="texturas">Texturas</button>
+        </div>
+        <button class="icono" id="btn-cerrar-informe" title="Cerrar (Esc)" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="informe__cuerpo" id="informe-validacion" role="tabpanel"></div>
+      <div class="informe__cuerpo" id="informe-texturas" role="tabpanel" hidden></div>
+    </div>
+  </div>
+
+  <div class="informe" id="ayuda" hidden>
+    <div class="informe__caja ayuda" role="dialog" aria-modal="true" aria-labelledby="ayuda-titulo">
+      <div class="informe__cabecera">
+        <h1 class="ayuda__titulo" id="ayuda-titulo">Visor 3D</h1>
+        <button class="icono" id="btn-cerrar-ayuda" title="Cerrar (Esc)" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="informe__cuerpo ayuda__cuerpo">
+        <p class="ayuda__entrada">Para mirar modelos 3D por dentro y por fuera: arrastra uno a la ventana y listo.</p>
+
+        <div class="ayuda__bloques">
+          <section>
+            <h2>Abrir</h2>
+            <p>Arrastra el archivo a la ventana o pulsa «Abrir». Sirven GLB, glTF, FBX, OBJ, STL, DAE, USDZ, 3MF y PLY. Un glTF con sus texturas, mejor en un ZIP o arrastrando la carpeta entera.</p>
+            <p class="solo-exe">En Windows, desde el engranaje puedes hacer que los modelos se abran con doble clic. Los últimos que abriste están en la pastilla con el nombre.</p>
+          </section>
+          <section>
+            <h2>Moverse</h2>
+            <p>Arrastrar: girar. Botón derecho: desplazar. Rueda: acercar y alejar. Con el dedo: uno para girar, dos para acercar y desplazar.</p>
+          </section>
+          <section>
+            <h2>Mirar</h2>
+            <p>A la derecha, cómo se ve: rejilla, sombras, alambre, esqueleto y medidas; modos de inspección (arcilla, cuadrícula UV, normales y cada canal del material); fondo, luz y entorno HDRI; y efectos. A la izquierda, lo que trae el modelo: sus piezas y, si las tiene, formas y cámaras. Las animaciones se eligen en el reproductor de abajo; si desplazan el modelo, la cámara lo sigue.</p>
+          </section>
+          <section>
+            <h2>Analizar</h2>
+            <p>Los bloques de color de la izquierda resumen el modelo. En los glTF, «Validación» enseña los errores del archivo, y «Ver texturas» cuánto ocupa cada textura. La regla de la barra flotante mide entre dos puntos.</p>
+          </section>
+          <section>
+            <h2>Guardar</h2>
+            <p>La cámara guarda una imagen PNG; el vídeo graba una vuelta completa alrededor del modelo (mientras graba no se puede tocar nada; Esc cancela).</p>
+          </section>
+          <section>
+            <h2>Apariencia</h2>
+            <p>En el engranaje: claro, oscuro o alto contraste.</p>
+          </section>
+        </div>
+
+        <h2 class="ayuda__subtitulo">Atajos de teclado</h2>
+        <dl class="atajos">
+          <div><dt><kbd>O</kbd></dt><dd>Abrir</dd></div>
+          <div><dt><kbd>F</kbd></dt><dd>Encuadrar</dd></div>
+          <div><dt><kbd>R</kbd></dt><dd>Rotación automática</dd></div>
+          <div><dt><kbd>G</kbd></dt><dd>Rejilla</dd></div>
+          <div><dt><kbd>W</kbd></dt><dd>Alambre</dd></div>
+          <div><dt><kbd>1</kbd>–<kbd>4</kbd></dt><dd>Modos de inspección</dd></div>
+          <div><dt><kbd>M</kbd></dt><dd>Regla</dd></div>
+          <div><dt><kbd>C</kbd></dt><dd>Captura</dd></div>
+          <div><dt><kbd>V</kbd></dt><dd>Vídeo girando</dd></div>
+          <div><dt><kbd>Espacio</kbd></dt><dd>Pausa la animación</dd></div>
+          <div><dt><kbd>F1</kbd></dt><dd>Esta ayuda</dd></div>
+          <div><dt><kbd>Esc</kbd></dt><dd>Cerrar, cancelar</dd></div>
+        </dl>
+
+        <button class="ayuda__empezar" id="btn-empezar">Empezar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grabando" id="grabando" hidden>
+    <div class="grabando__franja">
+      <span class="grabando__punto"></span>
+      <span id="grabando-texto">Grabando giro…</span>
+      <div class="grabando__barra"><span id="grabando-progreso"></span></div>
+      <button id="btn-cancelar-video">Cancelar</button>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>

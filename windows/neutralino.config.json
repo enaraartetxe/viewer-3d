@@ -1,0 +1,46 @@
+{
+  "applicationId": "com.enaraartetxe.visor3d",
+  "version": "0.1.0",
+  "applicationName": "Visor 3D",
+  "description": "Visor 3D",
+  "author": "Enara Artetxe",
+  "copyright": "Enara Artetxe",
+  "applicationIcon": "resources/icono.png",
+  "defaultMode": "window",
+  "port": 0,
+  "documentRoot": "/resources/",
+  "url": "/",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "tokenSecurity": "one-time",
+  "dataLocation": "system",
+  "logging": { "enabled": false, "writeToLogFile": false },
+  "nativeAllowList": [
+    "app.*", "window.*", "storage.*",
+    "os.getPath", "os.getEnv", "os.showOpenDialog", "os.showSaveDialog", "os.execCommand",
+    "filesystem.readBinaryFile", "filesystem.readDirectory", "filesystem.writeBinaryFile",
+    "filesystem.copy", "filesystem.createDirectory", "filesystem.remove", "filesystem.getStats"
+  ],
+  "modes": {
+    "window": {
+      "title": "Visor 3D",
+      "width": 1280,
+      "height": 820,
+      "minWidth": 720,
+      "minHeight": 480,
+      "center": true,
+      "resizable": true,
+      "icon": "/resources/icono.png",
+      "enableInspector": false,
+      "exitProcessOnClose": true
+    }
+  },
+  "cli": {
+    "binaryName": "visor-3d",
+    "resourcesPath": "/resources/",
+    "extensionsPath": "/extensions/",
+    "clientLibrary": "/resources/js/neutralino.js",
+    "binaryVersion": "6.10.0",
+    "clientVersion": "6.10.0"
+  }
+}
