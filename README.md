@@ -126,7 +126,7 @@ programas de escritorio son la misma página dentro de una ventana de
   `escritorio/neutralino.config.json`, GitHub Actions genera los tres programas
   en un Mac y los publica ([.github/workflows/publicar.yml](.github/workflows/publicar.yml)).
 
-### Cocreado con IA
+### Co-creado con IA
 
 Idea, diseño, dirección y pruebas: Enara Artetxe. Código escrito con
 **Claude Opus 5.5** (Anthropic).
