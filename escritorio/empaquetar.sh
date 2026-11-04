@@ -23,7 +23,7 @@ rm -rf "$obra/resources" "$obra/dist"
 mkdir -p "$obra/resources"
 
 # App
-cp ../index.html ../estilo.css ../main.js ../icono.svg ../icono.png "$obra/resources/"
+cp ../index.html ../estilo.css ../main.js ../idiomas.js ../icono.svg ../icono.png "$obra/resources/"
 cp -r ../entornos "$obra/resources/"
 
 # three, en local

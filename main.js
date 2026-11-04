@@ -20,6 +20,7 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { t, ponerIdioma, resolverIdioma, localeActual } from './idiomas.js';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { unzipSync } from 'three/addons/libs/fflate.module.js';
@@ -136,18 +137,18 @@ function elegirPrincipal(lista) {
 
 async function abrir(lista) {
   ocultarAviso();
-  mostrarCarga('Leyendo…');
+  mostrarCarga(t('leyendo'));
   try {
     lista = await expandirZips(lista);
     const principal = elegirPrincipal(lista);
     // Un HDRI sin modelo: se usa como entorno
     const hdri = lista.find((a) => ['hdr', 'exr'].includes(extension(a.ruta)));
     if (!principal && hdri) {
-      mostrarCarga('Cargando entorno…');
+      mostrarCarga(t('cargando.entorno'));
       await entornoPropio(hdri.blob, extension(hdri.ruta));
       return 'entorno';
     }
-    if (!principal) throw new Error('No encuentro ningún modelo (GLB, glTF, FBX, OBJ o STL) ni entorno (HDR, EXR) en lo que has abierto.');
+    if (!principal) throw new Error(t('sin.modelo.error'));
 
     // Los recursos (texturas, .bin…) se buscan por ruta relativa al modelo y,
     // si no, por nombre: los FBX suelen traer rutas absolutas de otro equipo.
@@ -172,7 +173,7 @@ async function abrir(lista) {
         || url;
     });
 
-    mostrarCarga('Cargando ' + base(principal.ruta) + '…');
+    mostrarCarga(t('cargando.archivo', base(principal.ruta)));
     const resultado = await cargar(principal, lista);
     formatoActual = extension(principal.ruta);
     montar(resultado.objeto, resultado.animaciones);
@@ -181,7 +182,7 @@ async function abrir(lista) {
     return true;
   } catch (error) {
     console.error(error);
-    mostrarAviso(error?.message || 'No se ha podido abrir el archivo.');
+    mostrarAviso(error?.message || t('no.abrir'));
     return false;
   } finally {
     ocultarCarga();
@@ -249,7 +250,7 @@ async function cargar(principal, lista) {
     const material = new THREE.PointsMaterial({ size: geometria.boundingSphere.radius * 0.004, vertexColors: conColor, color: conColor ? 0xffffff : 0x6b7280 });
     return { objeto: new THREE.Points(geometria, material), animaciones: [] };
   }
-  throw new Error('Formato no compatible: .' + ext);
+  throw new Error(t('formato.no', ext));
 }
 
 // Las texturas de FBX y OBJ llegan después del modelo: se espera a que el
@@ -420,13 +421,17 @@ function encuadrar(suave = true, alturaCentro = null) {
 // ── Estadísticas ────────────────────────────────────────────────
 
 const compacto = (n) => n < 1000 ? String(n)
-  : n < 1e6 ? (n / 1000).toLocaleString('es', { maximumFractionDigits: 1 }) + 'k'
-  : (n / 1e6).toLocaleString('es', { maximumFractionDigits: 1 }) + 'M';
+  : n < 1e6 ? (n / 1000).toLocaleString(localeActual(), { maximumFractionDigits: 1 }) + 'k'
+  : (n / 1e6).toLocaleString(localeActual(), { maximumFractionDigits: 1 }) + 'M';
 const tamano = (bytes) => bytes < 1024 ** 2
   ? Math.max(1, Math.round(bytes / 1024)) + ' KB'
-  : (bytes / 1024 ** 2).toLocaleString('es', { maximumFractionDigits: 1 }) + ' MB';
+  : (bytes / 1024 ** 2).toLocaleString(localeActual(), { maximumFractionDigits: 1 }) + ' MB';
 
+let ultimaInfo = null; // para volver a pintarla al cambiar de idioma
 function mostrarInfo(principal, lista) {
+  ultimaInfo = [principal, lista];
+  // Estos ya no muestran su texto fijo: que el cambio de idioma no los pise
+  for (const id of ['nombre-archivo', 'dato-peso', 'dato-vertices', 'dato-texturas']) delete $(id).dataset.t;
   let triangulos = 0, vertices = 0;
   const materiales = new Set(), texturas = new Set();
   modelo.traverse((o) => {
@@ -443,16 +448,15 @@ function mostrarInfo(principal, lista) {
 
   const pesoTotal = lista.reduce((s, a) => s + a.blob.size, 0);
   $('dato-formato').textContent = extension(principal.ruta).toUpperCase();
-  $('dato-peso').textContent = tamano(pesoTotal) + (lista.length > 1 ? ` · ${lista.length} archivos` : '');
+  $('dato-peso').textContent = tamano(pesoTotal) + (lista.length > 1 ? t('n.archivos', lista.length) : '');
   $('dato-triangulos').textContent = compacto(triangulos);
-  $('dato-vertices').textContent = `triángulos · ${compacto(vertices)} vértices`;
+  $('dato-vertices').textContent = t('triangulos.vertices', compacto(vertices));
   $('dato-materiales').textContent = materiales.size;
-  const memoria = datosTexturas().reduce((suma, t) => suma + t.bytes, 0);
-  $('dato-texturas').textContent = (texturas.size === 1 ? '1 textura' : `${texturas.size} texturas`)
-    + (memoria ? ` · ${tamano(memoria)} en GPU` : '');
+  const memoria = datosTexturas().reduce((suma, x) => suma + x.bytes, 0);
+  $('dato-texturas').textContent = t('n.texturas', texturas.size) + (memoria ? t('en.gpu', tamano(memoria)) : '');
   $('btn-ver-texturas').hidden = !texturas.size;
-  const t = cajaModelo.getSize(new THREE.Vector3());
-  $('dato-medidas').textContent = [t.x, t.y, t.z].map(longitud).join(' × ');
+  const tam = cajaModelo.getSize(new THREE.Vector3());
+  $('dato-medidas').textContent = [tam.x, tam.y, tam.z].map(longitud).join(' × ');
 
   const nombreVisible = principal.nombreOriginal || principal.ruta.split(/[\\/]/).pop();
   nombreModelo = nombreVisible.replace(/\.[^.]+$/, '') || 'modelo';
@@ -465,7 +469,7 @@ function mostrarInfo(principal, lista) {
 // ── Animaciones ─────────────────────────────────────────────────
 
 const reloj = (s) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
-const nombreClip = (i) => clips[i].name || `Animación ${i + 1}`;
+const nombreClip = (i) => clips[i].name || t('animacion.n', i + 1);
 let velocidad = 1;
 let pausado = false;
 let indiceClip = 0;
@@ -498,7 +502,7 @@ function pintarAnimaciones() {
     nombre.textContent = nombreClip(i);
     const duracion = document.createElement('span');
     duracion.className = 'clip__duracion';
-    duracion.textContent = clip.duration.toFixed(1).replace('.', ',') + ' s';
+    duracion.textContent = clip.duration.toLocaleString(localeActual(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' s';
     boton.append(nombre, duracion);
     boton.addEventListener('click', () => { ponerEnCadena(false); elegirClip(i); cerrarMenus(); });
     caja.append(boton);
@@ -522,16 +526,20 @@ function elegirClip(i) {
   accion = nueva;
   indiceClip = i;
   accion.paused = pausado;
-  [...$('lista-animaciones').children].forEach((b, j) => b.setAttribute('aria-checked', String(j === i)));
+  marcarClip();
+}
+
+function marcarClip() {
+  [...$('lista-animaciones').children].forEach((b, j) => b.setAttribute('aria-checked', String(j === indiceClip)));
   $('clip-nombre').textContent = enCadena
-    ? `${nombreClip(i)} · ${i + 1} de ${clips.length}`
-    : nombreClip(i);
+    ? `${nombreClip(indiceClip)} · ${t('n.de.m', indiceClip + 1, clips.length)}`
+    : nombreClip(indiceClip);
 }
 
 function ponerEnCadena(activa) {
   enCadena = activa;
   $('btn-todas').setAttribute('aria-pressed', String(activa));
-  $('btn-todas').title = activa ? 'Dejar de encadenar' : 'Reproducir todas seguidas';
+  $('btn-todas').title = t(activa ? 'todas.quitar' : 'todas.titulo');
 }
 $('btn-todas').addEventListener('click', () => {
   if (!mezclador) return;
@@ -575,21 +583,23 @@ let bucle = true;
 $('btn-bucle').addEventListener('click', () => {
   bucle = !bucle;
   $('btn-bucle').setAttribute('aria-pressed', String(bucle));
-  $('btn-bucle').title = bucle ? 'Repetir (activado)' : 'Repetir (desactivado)';
+  pintarBucle();
   if (!accion) return;
   if (!enCadena) {
     accion.setLoop(bucle ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
     accion.clampWhenFinished = !bucle;
   }
 });
+function pintarBucle() { $('btn-bucle').title = t(bucle ? 'repetir.si' : 'repetir.no'); }
 $('btn-clips').addEventListener('click', () => alternarMenu($('btn-clips'), $('menu-clips')));
 
 $('btn-play').addEventListener('click', alternarPausa);
 $('btn-velocidad').addEventListener('click', () => {
   velocidad = { 0.25: 0.5, 0.5: 1, 1: 2, 2: 0.25 }[velocidad];
-  $('btn-velocidad').textContent = String(velocidad).replace('.', ',') + '×';
+  pintarVelocidad();
   if (mezclador) mezclador.timeScale = velocidad;
 });
+function pintarVelocidad() { $('btn-velocidad').textContent = velocidad.toLocaleString(localeActual()) + '×'; }
 
 let arrastrandoLinea = false;
 const linea = $('clip-linea');
@@ -701,7 +711,7 @@ function pintarRelleno(input) {
 const intensidad = $('luz-intensidad');
 const angulo = $('luz-angulo');
 function pintarLuz() {
-  $('valor-intensidad').textContent = (+intensidad.value).toLocaleString('es', { maximumFractionDigits: 1 }) + '×';
+  $('valor-intensidad').textContent = (+intensidad.value).toLocaleString(localeActual(), { maximumFractionDigits: 1 }) + '×';
   $('valor-angulo').textContent = angulo.value + '°';
   pintarRelleno(intensidad);
   pintarRelleno(angulo);
@@ -721,12 +731,12 @@ const equirectangular = (textura) => {
 
 async function ponerEntorno(nombre) {
   if (!entornos.has(nombre)) {
-    mostrarCarga('Cargando entorno…');
+    mostrarCarga(t('cargando.entorno'));
     try {
       entornos.set(nombre, equirectangular(await new HDRLoader().loadAsync(ARCHIVOS_ENTORNO[nombre])));
     } catch (error) {
       console.error(error);
-      mostrarAviso('No se ha podido cargar el entorno.');
+      mostrarAviso(t('no.entorno'));
       return;
     } finally {
       ocultarCarga();
@@ -758,8 +768,8 @@ for (const boton of document.querySelectorAll('#entornos [data-entorno]')) {
 const selectorHdri = $('selector-hdri');
 $('btn-hdri').addEventListener('click', async () => {
   if (!window.Neutralino) { selectorHdri.click(); return; }
-  const [ruta] = await Neutralino.os.showOpenDialog('Cargar entorno HDRI', {
-    filters: [{ name: 'Entornos HDRI', extensions: ['hdr', 'exr'] }],
+  const [ruta] = await Neutralino.os.showOpenDialog(t('dialogo.hdri'), {
+    filters: [{ name: t('filtro.hdri'), extensions: ['hdr', 'exr'] }],
   }) || [];
   if (ruta) abrirDesdeEscritorio([ruta]);
 });
@@ -1026,19 +1036,25 @@ $('btn-restablecer-formas').addEventListener('click', () => {
 // ── Cámaras que trae el archivo ─────────────────────────────────
 
 let camarasModelo = [];
+let camaraElegida = -1; // -1: libre
 
 function pintarCamaras(objeto) {
   camarasModelo = [];
+  camaraElegida = -1;
   objeto.traverse((o) => { if (o.isCamera) camarasModelo.push(o); });
   $('seccion-camaras').hidden = !camarasModelo.length;
   $('num-camaras').textContent = camarasModelo.length;
+  pintarListaCamaras();
+}
+
+function pintarListaCamaras() {
   const caja = $('cuerpo-camaras');
   caja.replaceChildren();
-  ['Libre (girar con el ratón)', ...camarasModelo.map((c, i) => c.name || `Cámara ${i + 1}`)].forEach((texto, i) => {
+  [t('camara.libre'), ...camarasModelo.map((c, i) => c.name || t('camara.n', i + 1))].forEach((texto, i) => {
     const boton = document.createElement('button');
     boton.className = 'eleccion';
     boton.setAttribute('role', 'radio');
-    boton.setAttribute('aria-checked', String(i === 0));
+    boton.setAttribute('aria-checked', String(i === camaraElegida + 1));
     boton.innerHTML = '<span class="eleccion__nombre"></span>';
     boton.firstChild.textContent = texto;
     boton.addEventListener('click', () => verDesde(i - 1));
@@ -1049,6 +1065,7 @@ function pintarCamaras(objeto) {
 // Se copia la posición, el giro y el campo de visión de la cámara del archivo;
 // luego se puede seguir girando desde ahí
 function verDesde(indice) {
+  camaraElegida = indice;
   [...$('cuerpo-camaras').children].forEach((b, i) => b.setAttribute('aria-checked', String(i === indice + 1)));
   viaje = null;
   if (indice < 0) {
@@ -1076,10 +1093,12 @@ function verDesde(indice) {
 const MAX_HIJOS = 300;
 let resalte = null;
 const hijosVisibles = (o) => o.children.filter((c) => !c.isBone);
-const tipoNodo = (o) => o.isSkinnedMesh ? 'malla con huesos' : o.isMesh ? 'malla' : o.isPoints ? 'puntos'
-  : o.isLight ? 'luz' : o.isCamera ? 'cámara' : 'grupo';
+const tipoNodo = (o) => t(o.isSkinnedMesh ? 'tipo.malla.huesos' : o.isMesh ? 'tipo.malla' : o.isPoints ? 'tipo.puntos'
+  : o.isLight ? 'tipo.luz' : o.isCamera ? 'tipo.camara' : 'tipo.grupo');
 
+let objetoActual = null;
 function pintarPiezas(objeto) {
+  objetoActual = objeto;
   let mallas = 0;
   objeto.traverse((o) => { if (o.isMesh || o.isPoints) mallas++; });
   $('num-piezas').textContent = mallas;
@@ -1094,7 +1113,7 @@ function nodosDe(padre, nivel) {
   if (hijos.length > MAX_HIJOS) {
     const mas = document.createElement('div');
     mas.className = 'arbol__mas';
-    mas.textContent = `y ${hijos.length - MAX_HIJOS} más`;
+    mas.textContent = t('y.mas', hijos.length - MAX_HIJOS);
     nodos.push(mas);
   }
   return nodos;
@@ -1114,21 +1133,21 @@ function nodoArbol(objeto, nivel) {
   abrir.className = 'nodo__abrir';
   abrir.innerHTML = SVG_FLECHA;
   abrir.setAttribute('aria-expanded', 'false');
-  abrir.setAttribute('aria-label', 'Desplegar');
+  abrir.setAttribute('aria-label', t('desplegar'));
   const tieneHijos = hijosVisibles(objeto).length > 0;
   if (!tieneHijos) abrir.classList.add('sin-hijos');
 
   const nombre = document.createElement('span');
   nombre.className = 'nodo__nombre';
-  nombre.textContent = objeto.name || '(sin nombre)';
+  nombre.textContent = objeto.name || t('sin.nombre');
   // El tipo va en la descripción: en la fila le quitaba sitio al nombre
-  nombre.title = `${nombre.textContent} (${tipoNodo(objeto)}). Doble clic: encuadrar esta pieza`;
+  nombre.title = t('pieza.titulo', nombre.textContent, tipoNodo(objeto));
 
   const ojo = document.createElement('button');
   ojo.className = 'nodo__ojo';
   ojo.innerHTML = SVG_OJO;
   ojo.setAttribute('aria-pressed', String(objeto.visible));
-  ojo.setAttribute('aria-label', 'Mostrar u ocultar');
+  ojo.setAttribute('aria-label', t('mostrar.ocultar'));
 
   const hijos = document.createElement('div');
   hijos.className = 'nodo__hijos';
@@ -1181,7 +1200,7 @@ function encuadrarObjeto(objeto) {
 
 function longitud(valor) {
   const metros = formatoActual === 'glb' || formatoActual === 'gltf';
-  const n = (v, d) => v.toLocaleString('es', { maximumFractionDigits: d });
+  const n = (v, d) => v.toLocaleString(localeActual(), { maximumFractionDigits: d });
   if (!metros) return n(valor, valor < 10 ? 3 : 1) + ' u';
   if (valor < 0.01) return n(valor * 1000, 1) + ' mm';
   if (valor < 1) return n(valor * 100, 1) + ' cm';
@@ -1208,12 +1227,12 @@ function pintarMedidas() {
   escena.add(cajaVisible);
   const { min, max } = cajaModelo;
   const centro = cajaModelo.getCenter(new THREE.Vector3());
-  const t = cajaModelo.getSize(new THREE.Vector3());
+  const tam = cajaModelo.getSize(new THREE.Vector3());
   // Ancho en la arista de abajo delante, alto en una vertical, fondo abajo a un lado
   for (const [punto, valor] of [
-    [new THREE.Vector3(centro.x, min.y, max.z), t.x],
-    [new THREE.Vector3(max.x, centro.y, max.z), t.y],
-    [new THREE.Vector3(max.x, min.y, centro.z), t.z],
+    [new THREE.Vector3(centro.x, min.y, max.z), tam.x],
+    [new THREE.Vector3(max.x, centro.y, max.z), tam.y],
+    [new THREE.Vector3(max.x, min.y, centro.z), tam.z],
   ]) {
     const el = cota();
     el.textContent = longitud(valor);
@@ -1400,19 +1419,18 @@ function cargarValidador() {
   return validador;
 }
 
-const NIVELES = ['Error', 'Aviso', 'Info', 'Pista'];
+// Estado de la última validación: { tipo: 'no-gltf' | 'validando' | 'hecha' | 'fallo', informe }
+let validacion = { tipo: 'no-gltf' };
 
 async function validar(principal) {
-  const boton = $('btn-validacion');
   const turno = ++validacionEnCurso;
   if (!['glb', 'gltf'].includes(extension(principal.ruta))) {
-    boton.hidden = true;
-    $('informe-validacion').innerHTML = '<p class="informe__resumen">La validación es para glTF y GLB.</p>';
+    validacion = { tipo: 'no-gltf' };
+    pintarValidacion();
     return;
   }
-  boton.hidden = false;
-  boton.classList.remove('con-errores');
-  boton.textContent = 'Validando…';
+  validacion = { tipo: 'validando' };
+  pintarValidacion();
   try {
     const api = await cargarValidador();
     const informe = await api.validateBytes(new Uint8Array(await principal.blob.arrayBuffer()), {
@@ -1422,17 +1440,34 @@ async function validar(principal) {
         .then((r) => r.arrayBuffer()).then((b) => new Uint8Array(b)),
     });
     if (turno !== validacionEnCurso) return;
-    const { numErrors: errores, numWarnings: avisos } = informe.issues;
-    boton.classList.toggle('con-errores', errores > 0);
-    boton.textContent = errores || avisos
-      ? [errores && `${errores} ${errores === 1 ? 'error' : 'errores'}`, avisos && `${avisos} ${avisos === 1 ? 'aviso' : 'avisos'}`].filter(Boolean).join(' · ')
-      : '✓ glTF válido';
-    pintarInformeValidacion(informe);
+    validacion = { tipo: 'hecha', informe };
   } catch (error) {
     console.error(error);
     if (turno !== validacionEnCurso) return;
-    boton.textContent = 'No se ha podido validar';
-    $('informe-validacion').innerHTML = '<p class="informe__resumen">No se ha podido cargar el validador (en la versión web hace falta conexión).</p>';
+    validacion = { tipo: 'fallo' };
+  }
+  pintarValidacion();
+}
+
+function pintarValidacion() {
+  const boton = $('btn-validacion');
+  const caja = $('informe-validacion');
+  boton.hidden = validacion.tipo === 'no-gltf';
+  boton.classList.remove('con-errores');
+  if (validacion.tipo === 'no-gltf') {
+    caja.innerHTML = `<p class="informe__resumen">${t('validacion.solo.gltf')}</p>`;
+  } else if (validacion.tipo === 'validando') {
+    boton.textContent = t('validando');
+  } else if (validacion.tipo === 'fallo') {
+    boton.textContent = t('no.validar');
+    caja.innerHTML = `<p class="informe__resumen">${t('validador.sin.conexion')}</p>`;
+  } else {
+    const { numErrors: errores, numWarnings: avisos } = validacion.informe.issues;
+    boton.classList.toggle('con-errores', errores > 0);
+    boton.textContent = errores || avisos
+      ? [errores && t('n.errores', errores), avisos && t('n.avisos', avisos)].filter(Boolean).join(' · ')
+      : t('gltf.valido');
+    pintarInformeValidacion(validacion.informe);
   }
 }
 
@@ -1442,15 +1477,14 @@ function pintarInformeValidacion(informe) {
   const { numErrors, numWarnings, numInfos, numHints, messages, truncated } = informe.issues;
   const resumen = document.createElement('p');
   resumen.className = 'informe__resumen';
-  resumen.innerHTML = `<strong>${numErrors}</strong> errores · <strong>${numWarnings}</strong> avisos · ${numInfos} infos · ${numHints} pistas`
-    + (truncated ? ' (lista cortada)' : '') + '<br>Validador oficial de Khronos, versión ' + (informe.validatorVersion || '');
+  resumen.innerHTML = t('resumen.validacion', numErrors, numWarnings, numInfos, numHints, truncated, informe.validatorVersion || '');
   caja.append(resumen);
   for (const m of messages) {
     const fila = document.createElement('div');
     fila.className = 'problema';
     const nivel = document.createElement('span');
     nivel.className = 'problema__nivel problema__nivel--' + m.severity;
-    nivel.textContent = NIVELES[m.severity] || '';
+    nivel.textContent = t('niveles')[m.severity] || '';
     const texto = document.createElement('span');
     texto.className = 'problema__texto';
     texto.textContent = m.message;
@@ -1463,14 +1497,6 @@ function pintarInformeValidacion(informe) {
 }
 
 // Texturas: tamaño, formato y memoria aproximada en la tarjeta gráfica
-const USOS = {
-  map: 'Color', normalMap: 'Relieve', roughnessMap: 'Rugosidad', metalnessMap: 'Metal', aoMap: 'Oclusión',
-  emissiveMap: 'Emisión', alphaMap: 'Transparencia', bumpMap: 'Relieve', lightMap: 'Luz', specularMap: 'Brillo',
-  clearcoatMap: 'Barniz', clearcoatNormalMap: 'Barniz', clearcoatRoughnessMap: 'Barniz', transmissionMap: 'Transmisión',
-  sheenColorMap: 'Terciopelo', sheenRoughnessMap: 'Terciopelo', iridescenceMap: 'Iridiscencia', thicknessMap: 'Grosor',
-  anisotropyMap: 'Anisotropía', specularColorMap: 'Brillo', specularIntensityMap: 'Brillo',
-};
-
 function datosTexturas() {
   if (!modelo) return [];
   const porFuente = new Map();
@@ -1481,29 +1507,31 @@ function datosTexturas() {
         if (!t?.isTexture) continue;
         const fuente = t.source ?? t;
         if (!porFuente.has(fuente)) porFuente.set(fuente, { textura: t, usos: new Set() });
-        porFuente.get(fuente).usos.add(USOS[clave] || clave);
+        porFuente.get(fuente).usos.add(clave);
       }
     }
   });
-  return [...porFuente.values()].map(({ textura: t, usos }, i) => {
-    let ancho = 0, alto = 0, bytes = 0, formato = 'RGBA 8 bits';
-    if (t.isCompressedTexture && t.mipmaps?.length) {
-      ancho = t.mipmaps[0].width;
-      alto = t.mipmaps[0].height;
-      bytes = t.mipmaps.reduce((s, m) => s + (m.data?.byteLength || 0), 0);
-      formato = 'Comprimida (GPU)';
+  const nombresUso = t('usos');
+  return [...porFuente.values()].map(({ textura: tex, usos }, i) => {
+    let ancho = 0, alto = 0, bytes = 0, formato = t('rgba8');
+    if (tex.isCompressedTexture && tex.mipmaps?.length) {
+      ancho = tex.mipmaps[0].width;
+      alto = tex.mipmaps[0].height;
+      bytes = tex.mipmaps.reduce((s, m) => s + (m.data?.byteLength || 0), 0);
+      formato = t('comprimida');
     } else {
-      const img = t.image;
+      const img = tex.image;
       ancho = img?.width || img?.videoWidth || 0;
       alto = img?.height || img?.videoHeight || 0;
-      bytes = ancho * alto * 4 * (t.generateMipmaps !== false ? 4 / 3 : 1);
+      bytes = ancho * alto * 4 * (tex.generateMipmaps !== false ? 4 / 3 : 1);
     }
     const potencia = (n) => n > 0 && (n & (n - 1)) === 0;
     const avisos = [];
-    if (Math.max(ancho, alto) > 4096) avisos.push('Muy grande: más de 4096 px');
-    else if (Math.max(ancho, alto) > 2048) avisos.push('Grande: más de 2048 px');
-    if (ancho && (!potencia(ancho) || !potencia(alto))) avisos.push('Lado que no es potencia de 2');
-    return { textura: t, nombre: t.name || `Textura ${i + 1}`, usos: [...usos], ancho, alto, bytes, formato, avisos };
+    if (Math.max(ancho, alto) > 4096) avisos.push(t('muy.grande'));
+    else if (Math.max(ancho, alto) > 2048) avisos.push(t('grande'));
+    if (ancho && (!potencia(ancho) || !potencia(alto))) avisos.push(t('no.potencia'));
+    const usosLegibles = [...new Set([...usos].map((u) => nombresUso[u] || u))];
+    return { textura: tex, nombre: tex.name || t('textura.n', i + 1), usos: usosLegibles, ancho, alto, bytes, formato, avisos };
   }).sort((a, b) => b.bytes - a.bytes);
 }
 
@@ -1511,17 +1539,15 @@ function pintarInformeTexturas() {
   const caja = $('informe-texturas');
   caja.replaceChildren();
   const lista = datosTexturas();
-  const total = lista.reduce((s, t) => s + t.bytes, 0);
+  const total = lista.reduce((s, x) => s + x.bytes, 0);
   const resumen = document.createElement('p');
   resumen.className = 'informe__resumen';
-  resumen.innerHTML = lista.length
-    ? `<strong>${lista.length}</strong> texturas · unos <strong>${tamano(total)}</strong> en la tarjeta gráfica (aprox., con mipmaps)`
-    : 'Este modelo no tiene texturas.';
+  resumen.innerHTML = lista.length ? t('resumen.texturas', lista.length, tamano(total)) : t('sin.texturas');
   caja.append(resumen);
-  for (const t of lista) {
+  for (const tex of lista) {
     const fila = document.createElement('div');
     fila.className = 'textura';
-    const img = t.textura.image;
+    const img = tex.textura.image;
     let miniatura;
     const dibujable = img && (img instanceof ImageBitmap || img instanceof HTMLImageElement || img instanceof HTMLCanvasElement);
     if (dibujable) {
@@ -1535,13 +1561,13 @@ function pintarInformeTexturas() {
     const datos = document.createElement('div');
     const nombre = document.createElement('div');
     nombre.className = 'textura__nombre';
-    nombre.textContent = t.nombre;
-    nombre.title = t.nombre;
+    nombre.textContent = tex.nombre;
+    nombre.title = tex.nombre;
     const detalle = document.createElement('div');
     detalle.className = 'textura__datos';
-    detalle.textContent = `${t.ancho} × ${t.alto} · ${t.formato} · ${t.usos.join(', ')}`;
+    detalle.textContent = `${tex.ancho} × ${tex.alto} · ${tex.formato} · ${tex.usos.join(', ')}`;
     datos.append(nombre, detalle);
-    for (const aviso of t.avisos) {
+    for (const aviso of tex.avisos) {
       const a = document.createElement('span');
       a.className = 'textura__aviso';
       a.textContent = aviso;
@@ -1549,7 +1575,7 @@ function pintarInformeTexturas() {
     }
     const memoria = document.createElement('div');
     memoria.className = 'textura__memoria';
-    memoria.textContent = tamano(t.bytes);
+    memoria.textContent = tamano(tex.bytes);
     fila.append(miniatura, datos, memoria);
     caja.append(fila);
   }
@@ -1604,7 +1630,7 @@ async function guardarCaptura() {
   dibujar();
   componer(c.getContext('2d'));
   const blob = await new Promise((ok) => c.toBlob(ok, 'image/png'));
-  await guardar(blob, `${nombreModelo}.png`, 'Imagen PNG', 'png');
+  await guardar(blob, `${nombreModelo}.png`, t('imagen.png'), 'png');
 }
 
 const TIPOS_VIDEO = [
@@ -1619,7 +1645,7 @@ let grabacion = null;
 function grabarVideo() {
   if (!modelo || grabacion || !window.MediaRecorder) return;
   const [tipo, ext] = TIPOS_VIDEO.find(([t]) => MediaRecorder.isTypeSupported(t)) || [];
-  if (!tipo) { mostrarAviso('Este navegador no permite grabar vídeo.'); return; }
+  if (!tipo) { mostrarAviso(t('no.grabar')); return; }
 
   const c = lienzoCompuesto();
   const grabador = new MediaRecorder(c.captureStream(60), { mimeType: tipo, videoBitsPerSecond: 16e6 });
@@ -1641,11 +1667,11 @@ function grabarVideo() {
     $('grabando').hidden = true;
     controles.enabled = true;
     ajustarTamano();
-    if (!cancelada) await guardar(new Blob(trozos, { type: tipo }), `${nombreModelo}-giro.${ext}`, 'Vídeo', ext);
+    if (!cancelada) await guardar(new Blob(trozos, { type: tipo }), `${nombreModelo}-giro.${ext}`, t('video.archivo'), ext);
   };
 
   controles.enabled = false;
-  $('grabando-texto').textContent = 'Grabando giro…';
+  $('grabando-texto').textContent = t('grabando');
   $('grabando-progreso').style.width = '0';
   $('grabando').hidden = false;
   grabador.start(250);
@@ -1662,7 +1688,7 @@ function avanzarGrabacion(tiempo) {
   camara.lookAt(controles.target);
   $('grabando-progreso').style.width = avance * 100 + '%';
   if (avance === 1) {
-    $('grabando-texto').textContent = 'Guardando…';
+    $('grabando-texto').textContent = t('guardando');
     // Un último fotograma y se cierra
     requestAnimationFrame(() => g.grabador.state === 'recording' && g.grabador.stop());
   }
@@ -1680,14 +1706,14 @@ async function guardar(blob, nombre, descripcion, ext) {
     if (window.Neutralino) {
       let carpeta = '';
       try { carpeta = await Neutralino.os.getPath(ext === 'png' ? 'pictures' : 'video'); } catch { /* sin carpeta */ }
-      let ruta = await Neutralino.os.showSaveDialog('Guardar ' + descripcion.toLowerCase(), {
+      let ruta = await Neutralino.os.showSaveDialog(t('guardar.titulo', descripcion), {
         defaultPath: carpeta ? `${carpeta}${SEP}${nombre}` : nombre,
         filters: [{ name: descripcion, extensions: [ext] }],
       });
       if (!ruta) return;
       if (!ruta.toLowerCase().endsWith('.' + ext)) ruta += '.' + ext;
       await Neutralino.filesystem.writeBinaryFile(ruta, await blob.arrayBuffer());
-      mostrarAviso('Guardado en ' + ruta, true);
+      mostrarAviso(t('guardado.en', ruta), true);
     } else {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -1697,7 +1723,7 @@ async function guardar(blob, nombre, descripcion, ext) {
     }
   } catch (error) {
     console.error(error);
-    mostrarAviso('No se ha podido guardar el archivo.');
+    mostrarAviso(t('no.guardar'));
   }
 }
 
@@ -1895,7 +1921,7 @@ async function vecinos(carpeta, prefijo = '', nivel = 0, cuenta = { bytes: 0 }) 
 
 async function abrirDesdeEscritorio(rutas) {
   cerrarMenus();
-  mostrarCarga('Leyendo…');
+  mostrarCarga(t('leyendo'));
   const lista = [];
   try {
     for (const ruta of rutas) {
@@ -1910,7 +1936,7 @@ async function abrirDesdeEscritorio(rutas) {
     ocultarCarga();
     // Un reciente que ya no está (borrado, movido, en un USB que no está puesto)
     await guardarRecientes((await leerRecientes()).filter((r) => r !== rutas[0]));
-    mostrarAviso('No se encuentra ' + rutas[0]);
+    mostrarAviso(t('no.encuentra', rutas[0]));
     return;
   }
   // Se apunta el modelo principal, no las texturas que se hayan elegido con él
@@ -1920,12 +1946,12 @@ async function abrirDesdeEscritorio(rutas) {
 
 async function abrirConDialogo() {
   if (grabacion) return;
-  const rutas = await Neutralino.os.showOpenDialog('Abrir modelo 3D', {
+  const rutas = await Neutralino.os.showOpenDialog(t('dialogo.abrir'), {
     multiSelections: true,
     filters: [
-      { name: 'Modelos 3D', extensions: ['glb', 'gltf', 'zip', 'fbx', 'obj', 'stl', 'dae', 'usdz', 'usda', 'usdc', 'usd', '3mf', 'ply'] },
-      { name: 'Entornos HDRI', extensions: ['hdr', 'exr'] },
-      { name: 'Todos los archivos', extensions: ['*'] },
+      { name: t('filtro.modelos'), extensions: ['glb', 'gltf', 'zip', 'fbx', 'obj', 'stl', 'dae', 'usdz', 'usda', 'usdc', 'usd', '3mf', 'ply'] },
+      { name: t('filtro.hdri'), extensions: ['hdr', 'exr'] },
+      { name: t('filtro.todos'), extensions: ['*'] },
     ],
   });
   if (rutas?.length) abrirDesdeEscritorio(rutas);
@@ -1976,7 +2002,7 @@ function pintarRecientes(rutas) {
   if (!rutas.length) {
     const li = document.createElement('li');
     li.className = 'lista__vacia';
-    li.textContent = 'Todavía no hay ninguno';
+    li.textContent = t('recientes.ninguno');
     menu.append(li);
   }
   const vacio = $('vacio-recientes');
@@ -2088,7 +2114,7 @@ async function asociarWindows() {
   const orden = cadenaReg(`"${destino.exe}" "%1"`);
   const lineas = [
     `[${CLASES}\\${PROGID}]`,
-    '@="Modelo 3D"',
+    `@="${t('tipo.modelo3d')}"`,
     `[${CLASES}\\${PROGID}\\DefaultIcon]`,
     `@=${cadenaReg(`"${destino.exe}",0`)}`,
     `[${CLASES}\\${PROGID}\\shell\\open\\command]`,
@@ -2139,16 +2165,18 @@ async function desasociarWindows() {
 // abrirlos. Si el gestor de archivos ya usaba otra app, la nota explica cómo
 // cambiarla.
 
+// [tipo MIME, extensión, nombre del formato]; el nombre se registra en inglés
+// y en castellano («… model» / «Modelo …»), y cada sistema enseña el suyo
 const TIPOS_LINUX = [
-  ['model/gltf-binary', 'glb', 'Modelo glTF binario'],
-  ['model/gltf+json', 'gltf', 'Modelo glTF'],
-  ['application/vnd.autodesk.fbx', 'fbx', 'Modelo FBX'],
-  ['model/obj', 'obj', 'Modelo OBJ'],
-  ['model/stl', 'stl', 'Modelo STL'],
-  ['model/vnd.collada+xml', 'dae', 'Modelo COLLADA'],
-  ['model/vnd.usdz+zip', 'usdz', 'Modelo USDZ'],
-  ['model/3mf', '3mf', 'Modelo 3MF'],
-  ['model/x-ply', 'ply', 'Modelo PLY'],
+  ['model/gltf-binary', 'glb', 'glTF binario'],
+  ['model/gltf+json', 'gltf', 'glTF'],
+  ['application/vnd.autodesk.fbx', 'fbx', 'FBX'],
+  ['model/obj', 'obj', 'OBJ'],
+  ['model/stl', 'stl', 'STL'],
+  ['model/vnd.collada+xml', 'dae', 'COLLADA'],
+  ['model/vnd.usdz+zip', 'usdz', 'USDZ'],
+  ['model/3mf', '3mf', '3MF'],
+  ['model/x-ply', 'ply', 'PLY'],
 ];
 const DESKTOP = 'visor-3d.desktop';
 const enComillasSh = (t) => "'" + t.replace(/'/g, "'\\''") + "'";
@@ -2224,7 +2252,8 @@ async function asociarLinux() {
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">',
     ...TIPOS_LINUX.map(([tipo, ext, nombre]) =>
-      `  <mime-type type="${tipo}"><comment>${xml(nombre)}</comment><glob pattern="*.${ext}"/></mime-type>`),
+      `  <mime-type type="${tipo}"><comment>${xml(nombre.replace('binario', 'binary'))} model</comment>`
+      + `<comment xml:lang="es">Modelo ${xml(nombre)}</comment><glob pattern="*.${ext}"/></mime-type>`),
     '</mime-info>',
     '',
   ].join('\n'));
@@ -2252,23 +2281,25 @@ async function desasociarLinux() {
   await ejecutar(ordenes.map((o) => `(${o}) >/dev/null 2>&1`).join('; '));
 }
 
-// Textos del engranaje según el sistema (el HTML trae los de Windows)
+// Textos del engranaje según el sistema (el HTML trae las claves de Windows);
+// se cambia la clave, y el texto lo pone el idioma
 function textosSistema() {
   if (window.NL_OS !== 'Linux') return;
   $('sistema-nombre').textContent = 'Linux';
-  $('sistema-texto').textContent = 'Los .glb, .gltf, .fbx, .obj, .stl, .dae, .usdz, .3mf y .ply se abrirán con Visor 3D. '
-    + 'Se instala en tu usuario (~/.local), sin contraseña, y aparece en el menú de aplicaciones.';
-  $('nota-asociacion').textContent = 'Si tu gestor de archivos sigue usando otra aplicación: clic derecho en el archivo → '
-    + 'Abrir con → Visor 3D, y márcala como predeterminada.';
+  $('sistema-texto').dataset.t = 'asociar.texto.linux';
+  $('nota-asociacion').dataset.t = 'asociar.nota.linux';
+  $('sistema-texto').textContent = t('asociar.texto.linux');
+  $('nota-asociacion').textContent = t('asociar.nota.linux');
 }
 
 async function pintarAsociacion(asociado) {
   asociado ??= await estaAsociado().catch(() => false);
   const estado = $('estado-asociacion');
-  estado.textContent = asociado ? 'Activado' : 'Desactivado';
+  estado.textContent = t(asociado ? 'activado' : 'desactivado');
   estado.classList.toggle('activo', asociado);
   const boton = $('btn-asociar');
-  boton.textContent = asociado ? 'Quitar' : 'Asociar';
+  boton.dataset.t = asociado ? 'quitar' : 'asociar';
+  boton.textContent = t(boton.dataset.t);
   boton.classList.toggle('quitar', asociado);
 }
 
@@ -2283,7 +2314,7 @@ $('btn-asociar').addEventListener('click', async () => {
     await pintarAsociacion();
   } catch (error) {
     console.error(error);
-    mostrarAviso(quitar ? 'No se ha podido quitar la asociación.' : 'No se han podido asociar los archivos.');
+    mostrarAviso(t(quitar ? 'no.quitar' : 'no.asociar'));
   } finally {
     boton.disabled = false;
   }
@@ -2302,5 +2333,66 @@ if (window.Neutralino) {
   if (rutas.length) abrirDesdeEscritorio(rutas);
 }
 
+// ── Idioma: castellano o inglés ─────────────────────────────────
+// Por defecto el del sistema; se guarda lo elegido en el engranaje. Al
+// cambiarlo, idiomas.js traduce los textos fijos y aquí se repinta lo demás.
+
+let idiomaElegido = 'auto';
+
+function aplicarIdioma() {
+  ponerIdioma(resolverIdioma(idiomaElegido));
+  document.querySelectorAll('#idiomas [data-idioma]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.idioma === idiomaElegido)));
+  pintarLuz();
+  pintarVelocidad();
+  pintarBucle();
+  ponerEnCadena(enCadena);
+  if (ultimaInfo) mostrarInfo(...ultimaInfo);
+  if (clips.length) {
+    pintarAnimaciones();
+    marcarClip();
+  }
+  if (modelo) {
+    pintarListaCamaras();
+    if (objetoActual) pintarPiezas(objetoActual);
+    pintarValidacion();
+  }
+  if (!$('informe-texturas').hidden && !$('informe').hidden) pintarInformeTexturas();
+  if (window.Neutralino) {
+    textosSistema();
+    leerRecientes().then(pintarRecientes);
+    if (!$('menu-ajustes').hidden && !$('ajustes-sistema').hidden) pintarAsociacion();
+  }
+}
+
+for (const boton of document.querySelectorAll('#idiomas [data-idioma]')) {
+  boton.addEventListener('click', () => {
+    idiomaElegido = boton.dataset.idioma;
+    aplicarIdioma();
+    guardarPreferencia('idioma', idiomaElegido);
+  });
+}
+
+async function iniciarIdioma() {
+  const guardado = await leerPreferencia('idioma');
+  if (['auto', 'es', 'en'].includes(guardado)) idiomaElegido = guardado;
+  aplicarIdioma();
+}
+
+// Versión (solo la conoce el programa de escritorio) junto al crédito
+if (window.NL_APPVERSION) {
+  for (const el of document.querySelectorAll('.version-app')) el.textContent = ' ' + window.NL_APPVERSION;
+}
+
+// En el programa de escritorio, los enlaces externos se abren en el navegador
+document.addEventListener('click', (e) => {
+  const enlace = e.target.closest('a[href^="http"]');
+  if (!enlace || !window.Neutralino) return;
+  e.preventDefault();
+  Neutralino.os.open(enlace.href).catch(() => {});
+});
+
+// Primero el idioma del sistema (sin esperar), luego el guardado
+ponerIdioma(resolverIdioma('auto'));
+iniciarIdioma();
 iniciarTema();
 ayudaPrimeraVez((window.NL_ARGS || []).slice(1).some((a) => !a.startsWith('--')));

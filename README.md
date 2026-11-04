@@ -12,7 +12,9 @@ see it, with its textures and animations.
 · [Mac](https://github.com/enaraartetxe/viewer-3d/releases/latest/download/Visor-3D-mac.zip) (not tested on a real Mac yet)
 · **[Use it in the browser](https://enaraartetxe.com/experimentos/viewer-3d/)**
 
-One file per system, no installer, works offline. The interface is in Spanish.
+One file per system, no installer, works offline. The interface is in English
+and Spanish: it follows the system's language, and it can be changed from the
+gear icon.
 
 - **Windows 10/11**: it isn't signed, so the first time Windows may warn:
   «More info» → «Run anyway».
@@ -35,7 +37,7 @@ One file per system, no installer, works offline. The interface is in Spanish.
 - Dimensions, a ruler between two points, glTF validation with Khronos'
   official validator and a texture report.
 - PNG screenshots and a video turning around the model.
-- Light, dark and high-contrast themes.
+- Light, dark and high-contrast themes; English and Spanish.
 - On Windows and Linux: open models with a double click (from the gear icon)
   and recent files.
 
@@ -45,8 +47,9 @@ Plain HTML, CSS and JavaScript (no build step), with
 [three.js](https://threejs.org). The desktop apps are the same page inside a
 [Neutralino](https://neutralino.js.org) window.
 
-- `index.html`, `estilo.css`, `main.js`: the app. To try it, serve the folder
-  with any local server (for example `npx servez`).
+- `index.html`, `estilo.css`, `main.js`: the app; `idiomas.js`: its texts in
+  Spanish and English. To try it, serve the folder with any local server (for
+  example `npx servez`).
 - `escritorio/`: desktop packaging. `escritorio/empaquetar.sh` builds the apps
   into `escritorio/salida/`; details in [escritorio/README.md](escritorio/README.md).
 - Releases are automatic: when the version in
@@ -54,10 +57,10 @@ Plain HTML, CSS and JavaScript (no build step), with
   apps on a Mac runner and publishes them
   ([.github/workflows/publicar.yml](.github/workflows/publicar.yml)).
 
-## Co-created with AI
+## Made with AI
 
 Idea, design, direction and testing: Enara Artetxe. Code written with
-**Claude Opus 5.5** (Anthropic).
+**Claude Opus 5.5** (Anthropic), credited as co-author in the commits.
 
 ## Licences
 
@@ -83,7 +86,9 @@ modelo y lo ves, con sus texturas y animaciones.
 · [Mac](https://github.com/enaraartetxe/viewer-3d/releases/latest/download/Visor-3D-mac.zip) (sin probar todavía en un Mac de verdad)
 · **[Usar en el navegador](https://enaraartetxe.com/experimentos/viewer-3d/)**
 
-Un archivo por sistema, sin instalador y sin conexión.
+Un archivo por sistema, sin instalador y sin conexión. La interfaz está en
+inglés y en castellano: sigue el idioma del sistema, y se puede cambiar desde
+el engranaje.
 
 - **Windows 10/11**: no está firmado; la primera vez Windows puede avisar:
   «Más información» → «Ejecutar de todas formas».
@@ -107,7 +112,7 @@ Un archivo por sistema, sin instalador y sin conexión.
 - Medidas, regla entre dos puntos, validación glTF con el validador oficial de
   Khronos e informe de texturas.
 - Captura en PNG y vídeo girando alrededor del modelo.
-- Temas claro, oscuro y alto contraste.
+- Temas claro, oscuro y alto contraste; inglés y castellano.
 - En Windows y Linux: abrir los modelos con doble clic (desde el engranaje) y
   archivos recientes.
 
@@ -117,8 +122,9 @@ HTML, CSS y JavaScript sin compilar, con [three.js](https://threejs.org). Los
 programas de escritorio son la misma página dentro de una ventana de
 [Neutralino](https://neutralino.js.org).
 
-- `index.html`, `estilo.css`, `main.js`: la aplicación. Para probarla, sirve la
-  carpeta con cualquier servidor local (por ejemplo `npx servez`).
+- `index.html`, `estilo.css`, `main.js`: la aplicación; `idiomas.js`: sus
+  textos en castellano e inglés. Para probarla, sirve la carpeta con cualquier
+  servidor local (por ejemplo `npx servez`).
 - `escritorio/`: empaquetado de escritorio. `escritorio/empaquetar.sh` genera
   los programas en `escritorio/salida/`; detalles en
   [escritorio/README.md](escritorio/README.md).
@@ -126,10 +132,10 @@ programas de escritorio son la misma página dentro de una ventana de
   `escritorio/neutralino.config.json`, GitHub Actions genera los tres programas
   en un Mac y los publica ([.github/workflows/publicar.yml](.github/workflows/publicar.yml)).
 
-### Co-creado con IA
+### Hecho con IA
 
 Idea, diseño, dirección y pruebas: Enara Artetxe. Código escrito con
-**Claude Opus 5.5** (Anthropic).
+**Claude Opus 5.5** (Anthropic), que figura como coautor en los commits.
 
 ### Licencias
 
